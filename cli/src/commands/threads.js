@@ -19,12 +19,13 @@ export async function threadShow(ctx, id) {
   let messagesData = null;
   try {
     const query = {};
-    if (ctx.limit) query.limit = ctx.limit;
-    if (ctx.order) query.order = ctx.order;
+    if (ctx.limit) query.limit = ctx.limit; else query.limit = 100; // default to max page size
+    if (ctx.order) query.order = ctx.order; else query.order = 'asc'; // default to ascending to be nice
     if (ctx.after) query.after = ctx.after;
     if (ctx.before) query.before = ctx.before;
     if (ctx.runId) query.run_id = ctx.runId;
     messagesData = await apiRequest(ctx, `threads/${id}/messages`, { query });
+    console.log('\n\n====== messagesData', messagesData, '\n\n');
   } catch (e) {
     if (ctx.debug) console.error('[WARN] Failed to fetch messages:', e.message);
   }
