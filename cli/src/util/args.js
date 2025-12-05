@@ -36,6 +36,9 @@ export function parseArgs(argv) {
         ctx.after = argv[++i]; break;
       case '--before':
         ctx.before = argv[++i]; break;
+      case '--v1':
+      case '-v1':
+        ctx.agentsV1 = true; break;
       // New optional flags for threads transcript formatting / filtering
       case '--show-ids':
         ctx.showIds = true; break;

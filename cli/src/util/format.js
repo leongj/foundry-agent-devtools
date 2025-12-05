@@ -51,10 +51,11 @@ export function convertTimestamps(value) {
   if (typeof value === 'object') {
     const out = Array.isArray(value) ? [] : {};
     for (const [k, v] of Object.entries(value)) {
-      if (v != null && typeof v === 'number' && k.endsWith('_at')) {
-        if (v > 1_000_000_000 && v < 10_000_000_000) { // plausible epoch seconds range
-          out[k] = new Date(v * 1000).toISOString();
-          out[k + '_epoch'] = v;
+      if (v != null && k.endsWith('_at')) {
+        const epochSeconds = normalizeEpochSeconds(v);
+        if (epochSeconds != null) {
+          out[k + '_pretty'] = new Date(epochSeconds * 1000).toISOString();
+          out[k] = v;
           continue;
         }
       }
@@ -63,4 +64,25 @@ export function convertTimestamps(value) {
     return out;
   }
   return value;
+}
+
+function normalizeEpochSeconds(input) {
+  let numeric = null;
+  if (typeof input === 'number') {
+    numeric = input;
+  } else if (typeof input === 'string' && /^\d+$/.test(input)) {
+    numeric = Number(input);
+  }
+
+  if (numeric == null || Number.isNaN(numeric)) return null;
+
+  if (numeric > 1_000_000_000 && numeric < 10_000_000_000) {
+    return numeric;
+  }
+
+  if (numeric > 1_000_000_000_000 && numeric < 10_000_000_000_000) {
+    return Math.floor(numeric / 1000); // handle millisecond precision
+  }
+
+  return null;
 }

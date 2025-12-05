@@ -2,6 +2,8 @@ import { usageError } from "../http.js";
 import { agentsList, agentShow } from "../commands/agents.js";
 import { threadsList, threadShow } from "../commands/threads.js";
 import { runsList, runShow } from "../commands/runs.js";
+import { responsesList, responsesShow } from "../commands/responses.js";
+import { conversationsList, conversationsShow } from "../commands/conversations.js";
 import {
   vectorStoresList,
   vectorStoreShow,
@@ -32,7 +34,6 @@ export async function dispatch(ctx) {
       if (sub === "show") return runShow(ctx, sub2, sub3);
       throw usageError("Usage: aza runs (list <threadId>|show <threadId> <runId>)");
     case "vs":
-    case "vector-stores":
     case "vectorstores":
       if (sub === "list") return vectorStoresList(ctx);
       if (sub === "show") return vectorStoreShow(ctx, sub2);
@@ -44,11 +45,19 @@ export async function dispatch(ctx) {
       throw usageError(
         "Usage: aza vs (list|show <vectorStoreId>|files list <vectorStoreId>|files show <vectorStoreId> <fileId>)"
       );
-    case "file": // deprecated singular alias
     case "files":
       if (sub === "list") return filesList(ctx);
       if (sub === "show") return fileShow(ctx, sub2);
       throw usageError("Usage: aza files (list|show <fileId>)");
+    case "responses":
+      if (sub === "list") return responsesList(ctx);
+      if (sub === "show") return responsesShow(ctx, sub2);
+      throw usageError("Usage: aza responses (list|show <responseId>)");
+    case "conv":
+    case "conversations":
+      if (sub === "list") return conversationsList(ctx);
+      if (sub === "show") return conversationsShow(ctx, sub2);
+      throw usageError("Usage: aza (conv|conversations) (list|show <conversationId>)");
     default:
       throw usageError(`Unknown command ${main}`);
   }

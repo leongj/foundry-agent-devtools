@@ -1,6 +1,6 @@
 import { getToken } from './auth.js';
 
-export async function apiRequest(ctx, path, { query = {}, method = 'GET' } = {}) {
+export async function apiRequest(ctx, path, { query = {}, method = 'GET', body } = {}) {
   const base = ctx.project;
   if (!base) throw usageError('Missing project endpoint: provide --project or AZA_PROJECT');
   const apiVersion = ctx.apiVersion || 'v1';
@@ -16,12 +16,17 @@ export async function apiRequest(ctx, path, { query = {}, method = 'GET' } = {})
 
   const token = await getToken();
   const headers = { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' };
+  let payload;
+  if (body !== undefined) {
+    payload = typeof body === 'string' ? body : JSON.stringify(body ?? {});
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (ctx.debug) {
     console.error('[HTTP] ->', method, url.toString());
   }
 
-  const res = await fetch(url, { method, headers });
+  const res = await fetch(url, { method, headers, body: payload });
   const text = await res.text();
   if (ctx.debug) {
     console.error('[HTTP] <-', res.status, text.slice(0, 400));
