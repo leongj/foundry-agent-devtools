@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>aza · Agent Explorer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="aura" aria-hidden="true"></div>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow">Foundry Agent Explorer</p>
+      <h1>Visualize your Azure AI agents with quick, confident scans.</h1>
+      <p class="lede">Point the UI at the same project endpoint you use for <code>aza</code>, authenticate through the Azure CLI, and glance through every agent without juggling terminal flags.</p>
+    </header>
+
+    <section class="panel">
+      <form id="agentForm" class="controls">
+        <label class="field">
+          <span>Project endpoint</span>
+          <input type="url" id="project" name="project" placeholder="https://example.eastus.projects.azure.com/projects/123/v1" required>
+        </label>
+        <div class="field split">
+          <label>
+            <span>Limit</span>
+            <input type="number" id="limit" name="limit" min="1" max="100" placeholder="25">
+          </label>
+          <label>
+            <span>Order</span>
+            <select id="order" name="order">
+              <option value="">Newest first</option>
+              <option value="asc">Oldest first</option>
+              <option value="desc">Newest first</option>
+            </select>
+          </label>
+        </div>
+        <fieldset class="field inline">
+          <legend>Mode</legend>
+          <label>
+            <input type="radio" name="mode" value="modern" checked>
+            <span>v2 preview</span>
+          </label>
+          <label>
+            <input type="radio" name="mode" value="legacy">
+            <span>v1 classic</span>
+          </label>
+        </fieldset>
+        <button type="submit" class="primary">Load agents</button>
+      </form>
+      <div id="status" class="status-bar" role="status">Waiting for your first request.</div>
+    </section>
+
+    <section class="agents">
+      <div class="agents-header">
+        <div>
+          <p class="eyebrow">Live inventory</p>
+          <h2>Agents</h2>
+        </div>
+        <button type="button" class="ghost" id="refreshBtn">Refresh</button>
+      </div>
+      <div id="agents" class="agents-grid" aria-live="polite"></div>
+    </section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

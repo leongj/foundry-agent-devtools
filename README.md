@@ -82,3 +82,22 @@ aza vs files show vst_123456789 file_abcdef
 ```
 
 Agents command maps to REST `assistants` endpoint (naming aligned to docs).
+
+## Experimental web UI
+
+A minimal browser front-end now lives under `ui/`. It reuses the same authentication + HTTP helpers as the CLI and currently focuses on listing agents.
+
+Steps:
+
+1. Make sure you have already run `npm install` inside `cli/` so `@azure/identity` is available, and authenticate with `az login` (or provide `AZURE_CLIENT_ID`, etc.).
+2. Set your project endpoint in the shell (`export AZA_PROJECT=https://myendpoint/projects/12345/v1`).
+3. Start the UI server:
+
+	```bash
+	cd ui
+	npm start
+	```
+
+4. Open `http://localhost:4173` in a browser, paste the same project endpoint (or leave the field blank to rely on `AZA_PROJECT`), and click **Load agents**.
+
+The page shows agent metadata, supports both v2 preview + legacy v1 listings, and stores the last-used settings locally so you can refresh quickly. More surface area (threads, runs, vector stores, etc.) can be layered on later.

@@ -1,0 +1,13 @@
+{
+  "name": "aza-ui",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Experimental web UI for browsing Azure AI Foundry agents",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
