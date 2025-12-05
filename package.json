@@ -1,0 +1,23 @@
+{
+  "name": "azure-agents-cli",
+  "version": "1.0.0",
+  "description": "A lightweight CLI for Microsoft Foundry Agent Service.   Now updated to Support for [Foundry Agent Service v2](https://learn.microsoft.com/en-us/azure/ai-foundry/agents/overview?view=foundry) as well as [v1 (Classic)](https://learn.microsoft.com/en-us/azure/ai-foundry/agents/overview?view=foundry-classic)",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leongj/azure-agents-cli.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/leongj/azure-agents-cli/issues"
+  },
+  "homepage": "https://github.com/leongj/azure-agents-cli#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^24.10.1"
+  }
+}
