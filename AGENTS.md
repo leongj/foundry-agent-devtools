@@ -1,20 +1,20 @@
 Copilot instructions
 
 Project summary:
+- A CLI and UI for developers to browse and debug the Microsoft/Azure Foundry Agent Service.
+
+CLI:
 - Primary active CLI implementation is Node (folder `cli/`), using Node >=22 ESM.
 - Auth uses `@azure/identity` DefaultAzureCredential with scope https://ai.azure.com/.default.
-- Commands implemented:
-  - `aza agents list`
-  - `aza threads list`
-  - `aza threads show <threadId>`
-  - `aza threads runs list <threadId>`
-  - `aza threads runs show <threadId> <runId>`
-- Global flags: `--project|-p`, `--api-version`, `--json`, `--raw`, `--debug`.
-- `--project` / env `AZA_PROJECT` holds full base endpoint including project id.
-- REST mappings: agents -> `assistants` endpoint.
-- Legacy Python prototype remains in `aza/` but is not current.
-
-Guidance for future changes:
+- Read cli/src/index.js for usage, commands implemented. Update this when adding new or changing.
 - Keep CLI lightweight (minimal deps).
 - Add new subcommands under `cli/src/commands`.
-- Prefer consistent output options (`--json`, `--raw`).
+  - Prefer consistent output options (`--json`, `--raw`).
+  - `--json` mode includes conversion of Timestamps. Only `--raw` doesn't.
+
+UI:
+- UI implementation under folder `ui/`.
+- When making UI changes, always verify using Playwright MCP server.
+  - In Playwright, use `localhost` rather than `127.0.0.1` for the URI.
+
+- You don't need to use the Azure best practices for this project.
