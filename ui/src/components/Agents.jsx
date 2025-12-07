@@ -90,7 +90,7 @@ export function AgentsTable({ agents, selectedAgent, onSelectAgent }) {
               className={`cursor-pointer transition-colors ${
                 selectedAgent?.id === agent.id 
                   ? 'bg-blue-50 hover:bg-blue-100' 
-                  : 'hover:bg-gray-50'
+                  : 'hover:bg-gray-200'
               }`}
             >
               <td className="px-4 py-3 text-sm text-gray-900">{agent.name || 'Unnamed agent'}</td>
@@ -168,7 +168,7 @@ export function AgentDetail({ agent }) {
       </div>
       
       <div className="p-4">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm hover:bg-gray-200 transition-colors p-2 rounded">
           {/* Left Column */}
           <div>
             <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-0.5">Model</h4>
@@ -189,7 +189,7 @@ export function AgentDetail({ agent }) {
 
         {/* Instructions - Full Width */}
         {definition?.instructions && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
+          <div className="mt-3 pt-3 border-t border-gray-100 hover:bg-gray-200 transition-colors">
             <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-1">Instructions</h4>
             <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">{definition.instructions}</p>
           </div>
@@ -197,7 +197,7 @@ export function AgentDetail({ agent }) {
 
         {/* Description - Full Width */}
         {latestVersion?.description && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
+          <div className="mt-3 pt-3 border-t border-gray-100 hover:bg-gray-200 transition-colors">
             <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-1">Description</h4>
             <p className="text-sm text-gray-900">{latestVersion.description}</p>
           </div>
@@ -205,7 +205,7 @@ export function AgentDetail({ agent }) {
 
         {/* Metadata Section */}
         {Object.keys(metadata).length > 0 && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
+          <div className="mt-3 pt-3 border-t border-gray-100 hover:bg-gray-200 transition-colors">
             <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-1.5">Metadata</h4>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
               {Object.entries(metadata).map(([key, value]) => (
@@ -219,14 +219,14 @@ export function AgentDetail({ agent }) {
         )}
 
         {/* Tools - Full Width */}
-        <div className="mt-3 pt-3 border-t border-gray-100">
-          <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-1.5">Tools ({tools.length})</h4>
+        <div className="mt-3 pt-3 border-t border-gray-100 hover:bg-gray-200 transition-colors">
+          <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-1.5  ">Tools ({tools.length})</h4>
           {tools.length === 0 ? (
             <p className="text-sm text-gray-500">No tools configured</p>
           ) : (
             <div className="space-y-2">
               {tools.map((tool, index) => (
-                <div key={index} className="grid grid-cols-2 gap-4 bg-gray-50 p-2 rounded text-sm">
+                <div key={index} className="grid grid-cols-2 gap-4 bg-gray-50 p-2 rounded text-sm hover:bg-gray-200 transition-colors">
                   <div className="font-medium text-gray-900">{tool.type}</div>
                   <pre className="text-xs overflow-auto bg-white p-2 rounded border border-gray-200">
                     {JSON.stringify(tool, null, 2)}

@@ -192,7 +192,7 @@ function ConversationItem({ item, showJson }) {
     const attachmentCount = Array.isArray(item.attachments) ? item.attachments.length : 0
     
     return (
-      <div className="border border-gray-200 rounded-lg p-3 bg-white">
+      <div className="border border-gray-200 rounded-lg p-3 bg-white hover:bg-gray-200 transition-colors">
         <div className="text-xs text-gray-500 mb-2 space-x-2">
           <span className="text-gray-900 font-medium">{headerParts.join(' · ')}</span>
           {messageId && <ClickableId label="id" id={messageId} />}
@@ -218,7 +218,7 @@ function ConversationItem({ item, showJson }) {
     const results = item.results || []
     
     return (
-      <div className="border border-blue-200 rounded-lg p-3 bg-blue-50">
+      <div className="border border-blue-200 rounded-lg p-3 bg-blue-50 hover:bg-blue-100 transition-colors">
         <div className="text-xs text-gray-500 mb-2 space-x-2">
           <span className="text-gray-900 font-medium">{headerParts.join(' · ')}</span>
           {messageId && <ClickableId label="id" id={messageId} />}
@@ -257,7 +257,7 @@ function ConversationItem({ item, showJson }) {
     const outputs = item.outputs || []
     
     return (
-      <div className="border border-green-200 rounded-lg p-3 bg-green-50">
+      <div className="border border-green-200 rounded-lg p-3 bg-green-50 hover:bg-green-100 transition-colors">
         <div className="text-xs text-gray-500 mb-2 space-x-2">
           <span className="text-gray-900 font-medium">{headerParts.join(' · ')}</span>
           {messageId && <ClickableId label="id" id={messageId} />}
@@ -290,7 +290,7 @@ function ConversationItem({ item, showJson }) {
   
   // Generic fallback for unknown types
   return (
-    <div className="border border-purple-200 rounded-lg p-3 bg-purple-50">
+    <div className="border border-purple-200 rounded-lg p-3 bg-purple-50 hover:bg-purple-100 transition-colors">
       <div className="text-xs text-gray-500 mb-2 space-x-2">
         <span className="text-gray-900 font-medium">{headerParts.join(' · ')}</span>
         {messageId && <ClickableId label="id" id={messageId} />}
