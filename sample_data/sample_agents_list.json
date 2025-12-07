@@ -1,0 +1,83 @@
+[
+  {
+    "object": "agent",
+    "id": "agent2",
+    "name": "agent2",
+    "versions": {
+      "latest": {
+        "metadata": {
+          "logo": "Avatar_Default.svg",
+          "description": "",
+          "modified_at": "1765087225"
+        },
+        "object": "agent.version",
+        "id": "agent2:2",
+        "name": "agent2",
+        "version": "2",
+        "description": "",
+        "created_at": 1765087228,
+        "definition": {
+          "kind": "prompt",
+          "model": "gpt-4.1-mini",
+          "instructions": "You are the poet John Keats.",
+          "tools": []
+        }
+      }
+    }
+  },
+  {
+    "object": "agent",
+    "id": "agent1",
+    "name": "agent1",
+    "versions": {
+      "latest": {
+        "metadata": {
+          "logo": "Avatar_Default.svg",
+          "description": "",
+          "modified_at": "1764974932"
+        },
+        "object": "agent.version",
+        "id": "agent1:5",
+        "name": "agent1",
+        "version": "5",
+        "description": "",
+        "created_at": 1764974934,
+        "definition": {
+          "kind": "prompt",
+          "model": "gpt-4.1",
+          "instructions": "You always talk like captain raymond holt",
+          "tools": [
+            {
+              "type": "bing_grounding",
+              "bing_grounding": {
+                "search_configurations": [
+                  {
+                    "project_connection_id": "/subscriptions/f7634aec-15b2-4913-8511-d8deda3bcdc0/resourceGroups/rg-foundry-au/providers/Microsoft.CognitiveServices/accounts/aifoundry-au/projects/aiproject1/connections/binggrounding",
+                    "market": "en-us",
+                    "set_lang": "en",
+                    "count": 5
+                  }
+                ]
+              }
+            },
+            {
+              "type": "file_search",
+              "vector_store_ids": [
+                "vs_PpRcHhjNDq4XaCTP57HRNhVd"
+              ]
+            },
+            {
+              "type": "code_interpreter",
+              "container": {
+                "file_ids": [
+                  "assistant-UCRwCzVeuxNwBSJ1NmR2w2"
+                ],
+                "type": "auto"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+]

@@ -5,9 +5,22 @@
   "version": "0.1.0",
   "description": "Experimental web UI for browsing Azure AI Foundry agents",
   "scripts": {
+    "dev": "node server.js",
+    "build": "vite build",
+    "preview": "vite preview",
     "start": "node server.js"
   },
   "engines": {
     "node": ">=22"
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.1.17",
+    "@vitejs/plugin-react": "^5.1.1",
+    "autoprefixer": "^10.4.22",
+    "postcss": "^8.5.6",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "tailwindcss": "^3.4.17",
+    "vite": "^7.2.6"
   }
 }

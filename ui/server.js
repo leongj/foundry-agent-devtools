@@ -6,8 +6,8 @@ import { apiRequest } from '../cli/src/http.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const publicDir = path.join(__dirname, 'public');
-const examplesDir = path.join(__dirname, '..', 'examples');
+const publicDir = path.join(__dirname, 'dist');
+const examplesDir = path.join(__dirname, 'examples');
 const PORT = Number(process.env.PORT || 4173);
 const V2_AGENT_API_VERSION = '2025-11-15-preview';
 
@@ -29,6 +29,10 @@ const server = createServer(async (req, res) => {
     }
     if (requestUrl.pathname === '/api/conversations') {
       await handleConversationsRequest(requestUrl, res);
+      return;
+    }
+    if (requestUrl.pathname === '/api/examples/conversations') {
+      await handleExampleRequest('conversations.json', res);
       return;
     }
     if (requestUrl.pathname === '/api/examples/response') {
@@ -121,7 +125,9 @@ function normalizeAgentRow(agent) {
     || agent?.model
     || '';
   const createdEpoch = latest?.created_at || agent?.created_at || agent?.createdAt || null;
+  // Return the full agent object plus the normalized fields for backwards compatibility
   return {
+    ...agent,
     id: agent?.id || '',
     name: agent?.name || '',
     model,
