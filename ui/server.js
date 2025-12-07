@@ -7,6 +7,7 @@ import { apiRequest } from '../cli/src/http.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicDir = path.join(__dirname, 'public');
+const examplesDir = path.join(__dirname, '..', 'examples');
 const PORT = Number(process.env.PORT || 4173);
 const V2_AGENT_API_VERSION = '2025-11-15-preview';
 
@@ -24,6 +25,14 @@ const server = createServer(async (req, res) => {
     const requestUrl = new URL(req.url, `http://${req.headers.host}`);
     if (requestUrl.pathname === '/api/agents') {
       await handleAgentsRequest(requestUrl, res);
+      return;
+    }
+    if (requestUrl.pathname === '/api/conversations') {
+      await handleConversationsRequest(requestUrl, res);
+      return;
+    }
+    if (requestUrl.pathname === '/api/examples/response') {
+      await handleExampleRequest('example_resp_message.json', res);
       return;
     }
     await serveStaticAsset(requestUrl.pathname, res);
@@ -159,4 +168,58 @@ async function serveStaticAsset(pathname, res) {
 function sendJson(res, statusCode, body) {
   res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(body));
+}
+
+async function handleConversationsRequest(url, res) {
+  try {
+    const ctx = buildRequestContext(url);
+    const query = { 'api-version': V2_AGENT_API_VERSION };
+    if (ctx.limit) query.limit = ctx.limit;
+    if (ctx.order) query.order = ctx.order;
+    if (ctx.after) query.after = ctx.after;
+    if (ctx.before) query.before = ctx.before;
+    
+    const payload = await apiRequest(ctx, 'openai/conversations', { query });
+    const conversations = normalizeConversations(payload);
+    sendJson(res, 200, {
+      conversations,
+      total: conversations.length,
+      fetchedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    if (err.code === 'USAGE') {
+      sendJson(res, 400, { error: err.message });
+      return;
+    }
+    const status = err.status && Number.isInteger(err.status) ? err.status : 500;
+    sendJson(res, status, { error: err.message || 'Failed to load conversations' });
+  }
+}
+
+function normalizeConversations(payload) {
+  const rawList = payload?.conversations || payload?.data || payload?.items || payload;
+  const rows = Array.isArray(rawList) ? rawList : rawList ? [rawList] : [];
+  return rows.map(conv => normalizeConversationRow(conv));
+}
+
+function normalizeConversationRow(conv) {
+  if (!conv) return { id: '', created: '', object: '' };
+  const createdEpoch = conv?.created_at || conv?.createdAt || null;
+  return {
+    id: conv?.id || '',
+    created: createdEpoch ? epochToIso(createdEpoch) : '',
+    object: conv?.object || 'conversation',
+  };
+}
+
+async function handleExampleRequest(filename, res) {
+  try {
+    const filePath = path.join(examplesDir, filename);
+    const raw = await readFile(filePath, 'utf8');
+    const payload = JSON.parse(raw);
+    sendJson(res, 200, payload);
+  } catch (err) {
+    console.error('[server] failed to read example', filename, err);
+    sendJson(res, 500, { error: 'Failed to load example data' });
+  }
 }

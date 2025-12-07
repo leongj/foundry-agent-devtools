@@ -13,56 +13,162 @@
   <div class="aura" aria-hidden="true"></div>
   <main class="shell">
     <header class="hero">
-      <p class="eyebrow">Foundry Agent Explorer</p>
-      <h1>Visualize your Azure AI agents with quick, confident scans.</h1>
-      <p class="lede">Point the UI at the same project endpoint you use for <code>aza</code>, authenticate through the Azure CLI, and glance through every agent without juggling terminal flags.</p>
+      <div class="hero-copy">
+        <h1>Foundry Agent Service Explorer</h1>
+        <p class="lede">Point the UI at the same project endpoint you use for <code>aza</code>. Inspect agents, walk thread timelines, and peek at raw responses without leaving the browser.</p>
+      </div>
+      <section class="panel compact connection-panel">
+        <form id="agentForm" class="controls">
+          <label class="field">
+            <span>Project endpoint</span>
+            <input type="url" id="project" name="project" placeholder="https://example.eastus.projects.azure.com/projects/123/v1" value="https://aifoundry-au.services.ai.azure.com/api/projects/aiproject1" required>
+          </label>
+          <div class="field split">
+            <label>
+              <span>Limit</span>
+              <input type="number" id="limit" name="limit" min="1" max="100" placeholder="25">
+            </label>
+            <label>
+              <span>Order</span>
+              <select id="order" name="order">
+                <option value="">Newest first</option>
+                <option value="asc">Oldest first</option>
+                <option value="desc">Newest first</option>
+              </select>
+            </label>
+          </div>
+          <fieldset class="field inline">
+            <legend>Mode</legend>
+            <label>
+              <input type="radio" name="mode" value="modern" checked>
+              <span>v2 preview</span>
+            </label>
+            <label>
+              <input type="radio" name="mode" value="legacy">
+              <span>v1 classic</span>
+            </label>
+          </fieldset>
+          <button type="submit" class="primary">Load agents</button>
+        </form>
+        <div id="status" class="status-bar" role="status">Waiting for your first request.</div>
+      </section>
     </header>
+    <nav class="tabs" role="tablist">
+      <button type="button" class="tab active" data-tab="agents" aria-selected="true">Agents</button>
+      <button type="button" class="tab" data-tab="conversations">Conversations</button>
+      <button type="button" class="tab" data-tab="responses">Responses</button>
+    </nav>
 
-    <section class="panel">
-      <form id="agentForm" class="controls">
-        <label class="field">
-          <span>Project endpoint</span>
-          <input type="url" id="project" name="project" placeholder="https://example.eastus.projects.azure.com/projects/123/v1" required>
-        </label>
-        <div class="field split">
-          <label>
-            <span>Limit</span>
-            <input type="number" id="limit" name="limit" min="1" max="100" placeholder="25">
-          </label>
-          <label>
-            <span>Order</span>
-            <select id="order" name="order">
-              <option value="">Newest first</option>
-              <option value="asc">Oldest first</option>
-              <option value="desc">Newest first</option>
-            </select>
-          </label>
+    <section class="workspace" data-panel="agents">
+      <section class="panel table-panel">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Latest fetch</p>
+            <h2>Agents (top 20)</h2>
+          </div>
+          <button type="button" class="ghost" id="refreshBtn">Refresh</button>
         </div>
-        <fieldset class="field inline">
-          <legend>Mode</legend>
-          <label>
-            <input type="radio" name="mode" value="modern" checked>
-            <span>v2 preview</span>
-          </label>
-          <label>
-            <input type="radio" name="mode" value="legacy">
-            <span>v1 classic</span>
-          </label>
-        </fieldset>
-        <button type="submit" class="primary">Load agents</button>
-      </form>
-      <div id="status" class="status-bar" role="status">Waiting for your first request.</div>
+        <div class="table-wrapper" aria-live="polite">
+          <table id="agentsTable" class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">ID</th>
+                <th scope="col">Model</th>
+                <th scope="col">Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colspan="4">No agents loaded yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="agents">
+        <div class="agents-header">
+          <div>
+            <p class="eyebrow">Live inventory</p>
+            <h2>Agents</h2>
+          </div>
+        </div>
+        <div id="agents" class="agents-grid" aria-live="polite"></div>
+      </section>
     </section>
 
-    <section class="agents">
-      <div class="agents-header">
-        <div>
-          <p class="eyebrow">Live inventory</p>
-          <h2>Agents</h2>
+    <section class="workspace" data-panel="conversations" hidden>
+      <section class="panel table-panel">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Latest fetch</p>
+            <h2>Conversations (top 20)</h2>
+          </div>
+          <button type="button" class="ghost" id="refreshConversation">Refresh</button>
         </div>
-        <button type="button" class="ghost" id="refreshBtn">Refresh</button>
-      </div>
-      <div id="agents" class="agents-grid" aria-live="polite"></div>
+        <div class="table-wrapper" aria-live="polite">
+          <table id="conversationTable" class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Created</th>
+                <th scope="col">Object</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colspan="3">No conversations loaded yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="conversations">
+        <div class="conversations-header">
+          <div>
+            <p class="eyebrow">Live inventory</p>
+            <h2>Conversations</h2>
+          </div>
+        </div>
+        <div id="conversationsGrid" class="conversations-grid" aria-live="polite"></div>
+      </section>
+    </section>
+
+    <section class="workspace" data-panel="responses" hidden>
+      <section class="panel compact">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Latest sample</p>
+            <h2>Response payload</h2>
+          </div>
+          <button type="button" class="ghost" id="refreshResponse">Reload sample</button>
+        </div>
+        <p class="lede">Pulled from <code>example_resp_message.json</code>. Great for quickly checking temperature, tool usage, and instructions applied to a run.</p>
+        <div class="table-wrapper" aria-live="polite">
+          <table id="responsesTable" class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Type</th>
+                <th scope="col">Role</th>
+                <th scope="col">Identifier</th>
+                <th scope="col">Preview</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colspan="5">No response output yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="response-shell">
+        <dl id="responseSummary" class="response-summary"></dl>
+        <div id="responseOutput" class="response-output"></div>
+      </section>
     </section>
   </main>
   <script type="module" src="./app.js"></script>
