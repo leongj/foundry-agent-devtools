@@ -38,10 +38,10 @@ To run:
 Usage (v2):
 	aza agents list [--limit N --order asc|desc --after ID --before ID]
 	aza agents show <agentName>
-	aza responses list [--limit N --order asc|desc --after ID --before ID]
-	aza responses show <responseId>
-	aza conversations list [--limit N --order asc|desc --after ID --before ID]
-	aza conversations show <conversationId>
+	aza resp[onses] list [--limit N --order asc|desc --after ID --before ID]
+	aza resp[onses] show <responseId>
+	aza conv[ersations] list [--limit N --order asc|desc --after ID --before ID]
+	aza conv[ersations] show <conversationId>
 
 Usage (v1):
 	aza agents list [--limit N --order asc|desc --after ID --before ID] -v1

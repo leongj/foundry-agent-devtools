@@ -49,6 +49,7 @@ export async function dispatch(ctx) {
       if (sub === "list") return filesList(ctx);
       if (sub === "show") return fileShow(ctx, sub2);
       throw usageError("Usage: aza files (list|show <fileId>)");
+    case "resp":
     case "responses":
       if (sub === "list") return responsesList(ctx);
       if (sub === "show") return responsesShow(ctx, sub2);
