@@ -231,12 +231,6 @@ function App() {
             </section>
 
             <section className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/50 p-6">
-              <div className="mb-4">
-                <p className="text-xs uppercase tracking-wider text-gray-500">Agent Detail</p>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {selectedAgent ? selectedAgent.name : 'Select an agent'}
-                </h2>
-              </div>
               <AgentDetail agent={selectedAgent} />
             </section>
           </div>

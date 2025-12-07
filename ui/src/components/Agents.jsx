@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { formatDate } from '../utils'
 
 function getAgentTools(agent) {
@@ -105,6 +106,9 @@ export function AgentsTable({ agents, selectedAgent, onSelectAgent }) {
 }
 
 export function AgentDetail({ agent }) {
+  const [showJson, setShowJson] = useState(false)
+  const [copied, setCopied] = useState(false)
+
   if (!agent) {
     return (
       <div className="border border-dashed border-gray-300 rounded-xl p-8 text-center text-gray-500">
@@ -116,84 +120,119 @@ export function AgentDetail({ agent }) {
   const latestVersion = agent.versions?.latest
   const definition = latestVersion?.definition
   const tools = definition?.tools || []
+  const metadata = latestVersion?.metadata || {}
+
+  const handleCopyJson = async () => {
+    await navigator.clipboard.writeText(JSON.stringify(agent, null, 2))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  if (showJson) {
+    return (
+      <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+        <div className="p-4 flex justify-between items-center border-b border-gray-200">
+          <button
+            onClick={() => setShowJson(false)}
+            className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
+          >
+            ← Back to Details
+          </button>
+          <button
+            onClick={handleCopyJson}
+            className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+          >
+            {copied ? '✓ Copied!' : 'Copy JSON'}
+          </button>
+        </div>
+        <pre className="p-4 text-xs overflow-auto max-h-[600px] bg-gray-50">
+          {JSON.stringify(agent, null, 2)}
+        </pre>
+      </div>
+    )
+  }
 
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
-      <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">{agent.name || 'Unnamed agent'}</h3>
-        <p className="text-sm text-gray-600 mt-1">ID: {agent.id}</p>
+      <div className="p-4 flex justify-between items-center border-b border-gray-200">
+        <div className="flex items-baseline gap-3">
+          <h3 className="text-lg font-semibold text-gray-900">{agent.name}</h3>
+          <span className="text-sm text-gray-500">v{latestVersion?.version || '—'}</span>
+        </div>
+        <button
+          onClick={() => setShowJson(true)}
+          className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
+        >
+          View JSON
+        </button>
       </div>
       
-      <div className="p-6 space-y-6">
-        {/* Version Info */}
-        <div>
-          <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-2">Version</h4>
-          <p className="text-sm text-gray-900">{latestVersion?.version || '—'}</p>
-        </div>
-
-        {/* Model */}
-        <div>
-          <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-2">Model</h4>
-          <p className="text-sm text-gray-900">{definition?.model || '—'}</p>
-        </div>
-
-        {/* Instructions */}
-        {definition?.instructions && (
+      <div className="p-4">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          {/* Left Column */}
           <div>
-            <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-2">Instructions</h4>
-            <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-lg">{definition.instructions}</p>
+            <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-0.5">Model</h4>
+            <p className="text-gray-900">{definition?.model || '—'}</p>
+          </div>
+
+          <div>
+            <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-0.5">Created</h4>
+            <p className="text-gray-900">{formatDate(latestVersion?.created_at * 1000)}</p>
+            {latestVersion?.metadata?.modified_at && (
+              <>
+                <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-0.5 mt-2">Modified</h4>
+                <p className="text-gray-900">{formatDate(parseInt(latestVersion.metadata.modified_at) * 1000)}</p>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Instructions - Full Width */}
+        {definition?.instructions && (
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-1">Instructions</h4>
+            <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">{definition.instructions}</p>
           </div>
         )}
 
-        {/* Description */}
+        {/* Description - Full Width */}
         {latestVersion?.description && (
-          <div>
-            <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-2">Description</h4>
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-1">Description</h4>
             <p className="text-sm text-gray-900">{latestVersion.description}</p>
           </div>
         )}
 
-        {/* Tools */}
-        <div>
-          <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-2">Tools ({tools.length})</h4>
-          {tools.length === 0 ? (
-            <p className="text-sm text-gray-500">No tools configured</p>
-          ) : (
-            <div className="space-y-3">
-              {tools.map((tool, index) => (
-                <div key={index} className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-sm font-medium text-gray-900">{tool.type}</p>
-                  {tool.type === 'file_search' && tool.vector_store_ids && (
-                    <p className="text-xs text-gray-600 mt-1">
-                      Vector stores: {tool.vector_store_ids.join(', ')}
-                    </p>
-                  )}
-                  {tool.type === 'code_interpreter' && tool.container?.file_ids && (
-                    <p className="text-xs text-gray-600 mt-1">
-                      Files: {tool.container.file_ids.length}
-                    </p>
-                  )}
-                  {tool.type === 'bing_grounding' && tool.bing_grounding?.search_configurations && (
-                    <p className="text-xs text-gray-600 mt-1">
-                      Configurations: {tool.bing_grounding.search_configurations.length}
-                    </p>
-                  )}
+        {/* Metadata Section */}
+        {Object.keys(metadata).length > 0 && (
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-1.5">Metadata</h4>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              {Object.entries(metadata).map(([key, value]) => (
+                <div key={key}>
+                  <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-0.5">{key}</h4>
+                  <p className="text-gray-900">{value || '—'}</p>
                 </div>
               ))}
             </div>
-          )}
-        </div>
-
-        {/* Timestamps */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-2">Created</h4>
-            <p className="text-sm text-gray-900">{formatDate(latestVersion?.created_at * 1000)}</p>
           </div>
-          {latestVersion?.metadata?.modified_at && (
-            <div>
-              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-2">Modified</h4>
-              <p className="text-sm text-gray-900">{formatDate(parseInt(latestVersion.metadata.modified_at) * 1000)}</p>
+        )}
+
+        {/* Tools - Full Width */}
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-1.5">Tools ({tools.length})</h4>
+          {tools.length === 0 ? (
+            <p className="text-sm text-gray-500">No tools configured</p>
+          ) : (
+            <div className="space-y-2">
+              {tools.map((tool, index) => (
+                <div key={index} className="grid grid-cols-2 gap-4 bg-gray-50 p-2 rounded text-sm">
+                  <div className="font-medium text-gray-900">{tool.type}</div>
+                  <pre className="text-xs overflow-auto bg-white p-2 rounded border border-gray-200">
+                    {JSON.stringify(tool, null, 2)}
+                  </pre>
+                </div>
+              ))}
             </div>
           )}
         </div>
