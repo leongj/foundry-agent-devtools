@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "description": "Experimental web UI for browsing Azure AI Foundry agents",
   "scripts": {
-    "dev": "node server.js",
+    "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.js"

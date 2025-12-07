@@ -4,22 +4,6 @@ A lightweight React + Tailwind UI for visualizing Azure AI Foundry Agent Service
 
 ## Quick Start
 
-### Development
-
-Run both the Vite dev server and API server:
-
-```bash
-# Terminal 1 - Start Vite dev server
-cd ui
-npm run dev
-
-# Terminal 2 - Start API server
-cd ui
-PORT=4174 node server.js
-```
-
-Then visit http://localhost:5174
-
 ### Production
 
 Build and serve:
@@ -30,7 +14,7 @@ npm run build
 npm start
 ```
 
-Then visit http://localhost:4173
+Then Ctrl+click on the link provided
 
 ## Code Reduction
 
