@@ -96,7 +96,7 @@ function App() {
           <h1 className="text-3xl font-semibold text-gray-900">
             Foundry Agent Service Explorer
           </h1>
-          <p className="text-gray-600">A simple viewer for your Microsoft Foundry Agent Service project. Source code here: <a href="https://github.com/leongj/azure-agents-cli" className="text-orange-500 hover:underline">https://github.com/leongj/azure-agents-cli</a></p>
+          <p className="text-gray-600">A simple viewer for your Microsoft Foundry Agent Service project. Source code here: <a href="https://github.com/leongj/foundry-agent-devtools" className="text-blue-500 hover:underline">https://github.com/leongj/foundry-agent-devtools</a></p>
           <ConfigPanel
             config={config}
             onConfigChange={setConfig}
