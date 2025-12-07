@@ -3,6 +3,8 @@
 The [Microsoft Foundry Agent Service](https://learn.microsoft.com/en-us/azure/ai-foundry/what-is-azure-ai-foundry?view=foundry) provides some good tools in the playground for tracing and debugging -- oddly though if you want to just see the raw JSON content of Agents/Conversations/Responses, there's no easy way to do that.
 These Dev Tools help close that gap -- providing a UI and a CLI for viewing stored data in Agent Service.
 
+> NOTE: This repo is a beta / work in progress, it's subject to change, and Issues and PRs welcome!
+
 ## Requirements
 - Node runtime (Node >=22, ESM)
 - Auth via [DefaultAzureCredential](https://learn.microsoft.com/en-gb/azure/developer/javascript/sdk/authentication/credential-chains#defaultazurecredential-overview) (easiest via [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest))
