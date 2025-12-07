@@ -31,6 +31,10 @@ const server = createServer(async (req, res) => {
       await handleConversationsRequest(requestUrl, res);
       return;
     }
+    if (requestUrl.pathname.startsWith('/api/conversations/') && requestUrl.pathname.endsWith('/items')) {
+      await handleConversationItemsRequest(requestUrl, res);
+      return;
+    }
     if (requestUrl.pathname === '/api/examples/conversations') {
       await handleExampleRequest('conversations.json', res);
       return;
@@ -216,6 +220,35 @@ function normalizeConversationRow(conv) {
     created: createdEpoch ? epochToIso(createdEpoch) : '',
     object: conv?.object || 'conversation',
   };
+}
+
+async function handleConversationItemsRequest(url, res) {
+  try {
+    const ctx = buildRequestContext(url);
+    // Extract conversation ID from path like /api/conversations/{id}/items
+    const match = url.pathname.match(/\/api\/conversations\/([^/]+)\/items/);
+    if (!match || !match[1]) {
+      sendJson(res, 400, { error: 'Invalid conversation ID' });
+      return;
+    }
+    const conversationId = match[1];
+    
+    const query = { 'api-version': V2_AGENT_API_VERSION };
+    if (ctx.limit) query.limit = ctx.limit;
+    if (ctx.order) query.order = ctx.order;
+    if (ctx.after) query.after = ctx.after;
+    if (ctx.before) query.before = ctx.before;
+    
+    const payload = await apiRequest(ctx, `openai/conversations/${conversationId}/items`, { query });
+    sendJson(res, 200, payload);
+  } catch (err) {
+    if (err.code === 'USAGE') {
+      sendJson(res, 400, { error: err.message });
+      return;
+    }
+    const status = err.status && Number.isInteger(err.status) ? err.status : 500;
+    sendJson(res, status, { error: err.message || 'Failed to load conversation items' });
+  }
 }
 
 async function handleExampleRequest(filename, res) {

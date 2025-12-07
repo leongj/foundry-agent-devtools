@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useAgents, useConversations, useResponse } from './hooks'
+import { useAgents, useConversations, useConversationDetails, useResponse } from './hooks'
 import { AgentsList, AgentsTable, AgentDetail } from './components/Agents'
-import { ConversationsList, ConversationsTable } from './components/Conversations'
+import { ConversationsList, ConversationsTable, ConversationDetail } from './components/Conversations'
 import { ResponseView, ResponsesTable } from './components/Responses'
 import { formatDate } from './utils'
 
@@ -157,9 +157,11 @@ function App() {
   })
   const [activeTab, setActiveTab] = useState('agents')
   const [selectedAgent, setSelectedAgent] = useState(null)
+  const [selectedConversation, setSelectedConversation] = useState(null)
 
   const agentsData = useAgents(config)
   const conversationsData = useConversations(config)
+  const conversationDetailsData = useConversationDetails(config, selectedConversation?.id)
   const responseData = useResponse()
 
   useEffect(() => {
@@ -252,18 +254,19 @@ function App() {
                   Refresh
                 </button>
               </div>
-              <ConversationsTable conversations={conversationsData.conversations} />
+              <ConversationsTable 
+                conversations={conversationsData.conversations}
+                selectedConversation={selectedConversation}
+                onSelectConversation={setSelectedConversation}
+              />
             </section>
 
             <section className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/50 p-6">
-              <div className="mb-4">
-                <p className="text-xs uppercase tracking-wider text-gray-500">Live inventory</p>
-                <h2 className="text-xl font-semibold text-gray-900">Conversations</h2>
-              </div>
-              <ConversationsList
-                conversations={conversationsData.conversations}
-                loading={conversationsData.loading}
-                error={conversationsData.error}
+              <ConversationDetail 
+                conversation={selectedConversation}
+                items={conversationDetailsData.items}
+                loading={conversationDetailsData.loading}
+                error={conversationDetailsData.error}
               />
             </section>
           </div>

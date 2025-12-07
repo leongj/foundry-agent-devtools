@@ -97,6 +97,57 @@ export function useConversations(config) {
   return { conversations, loading, error, fetchedAt, refresh: fetchConversations }
 }
 
+export function useConversationDetails(config, conversationId) {
+  const [items, setItems] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    if (!conversationId || !config.project) {
+      setItems(null)
+      setError(null)
+      return
+    }
+
+    const fetchDetails = async () => {
+      const params = new URLSearchParams({ 
+        project: config.project,
+        limit: '100',
+        order: 'asc'
+      })
+
+      setLoading(true)
+      setError(null)
+
+      try {
+        const response = await fetch(`/api/conversations/${conversationId}/items?${params}`)
+        if (!response.ok) {
+          const text = await response.text()
+          try {
+            const payload = JSON.parse(text)
+            throw new Error(payload.error || 'Failed to load conversation details')
+          } catch {
+            throw new Error(text || 'Failed to load conversation details')
+          }
+        }
+        const data = await response.json()
+        // Handle different response structures
+        const itemsList = data.data || data.items || data || []
+        setItems(Array.isArray(itemsList) ? itemsList : [])
+      } catch (err) {
+        setError(err.message)
+        setItems(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDetails()
+  }, [config.project, conversationId])
+
+  return { items, loading, error }
+}
+
 export function useResponse() {
   const [response, setResponse] = useState(null)
   const [loading, setLoading] = useState(false)
