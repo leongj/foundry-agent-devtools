@@ -152,6 +152,7 @@ export function useResponse() {
   const [response, setResponse] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [loadedAt, setLoadedAt] = useState(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -162,6 +163,7 @@ export function useResponse() {
         if (!res.ok) throw new Error('Failed to load sample response')
         const payload = await res.json()
         setResponse(payload)
+        setLoadedAt(new Date().toISOString())
       } catch (err) {
         setError(err.message)
         setResponse(null)
@@ -172,5 +174,5 @@ export function useResponse() {
     fetchData()
   }, [])
 
-  return { response, loading, error }
+  return { response, loading, error, loadedAt }
 }

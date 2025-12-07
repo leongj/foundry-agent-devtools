@@ -14,7 +14,6 @@ CLI:
 
 UI:
 - UI implementation under folder `ui/`.
-- When making UI changes, always verify using Playwright MCP server.
-  - In Playwright, use `localhost` rather than `127.0.0.1` for the URI.
+- Frontend is React, Vite, Tailwind
 
 - You don't need to use the Azure best practices for this project.

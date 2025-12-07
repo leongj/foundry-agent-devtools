@@ -126,8 +126,40 @@ function countAnnotations(content) {
   return count
 }
 
+// Clickable ID component with copy-to-clipboard and tooltip
+function ClickableId({ label, id }) {
+  const [copied, setCopied] = useState(false)
+  const [showTooltip, setShowTooltip] = useState(false)
+
+  const handleClick = async (e) => {
+    e.stopPropagation()
+    await navigator.clipboard.writeText(id)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <span className="relative inline-block">
+      <span
+        onClick={handleClick}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        className="cursor-pointer hover:text-gray-700 transition-colors"
+      >
+        {label}: {id}
+      </span>
+      {(showTooltip || copied) && (
+        <span className="absolute left-0 -top-8 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+          {copied ? '✓ Copied!' : 'Click to copy'}
+        </span>
+      )}
+    </span>
+  )
+}
+
 // Render a single conversation item based on its type
 function ConversationItem({ item, showJson }) {
+  const [expanded, setExpanded] = useState(false)
   const itemType = item.type || 'unknown'
   const timestamp = item.created_at ? formatDate(item.created_at * 1000) : ''
   const role = item.role || ''
@@ -138,10 +170,9 @@ function ConversationItem({ item, showJson }) {
   if (role) headerParts.push(role)
   if (itemType !== 'message') headerParts.push(`[${itemType}]`)
   
-  const extras = []
-  if (item.id) extras.push(`id: ${item.id.slice(0, 12)}...`)
-  if (item.created_by?.response_id) extras.push(`response: ${item.created_by.response_id.slice(0, 12)}...`)
-  if (item.call_id) extras.push(`call: ${item.call_id.slice(0, 12)}...`)
+  const messageId = item.id
+  const responseId = item.created_by?.response_id
+  const callId = item.call_id
   
   if (showJson) {
     return (
@@ -162,9 +193,11 @@ function ConversationItem({ item, showJson }) {
     
     return (
       <div className="border border-gray-200 rounded-lg p-3 bg-white">
-        <div className="text-xs text-gray-600 mb-2">
-          {headerParts.join(' · ')}
-          {extras.length > 0 && <span className="text-gray-400"> ({extras.join(', ')})</span>}
+        <div className="text-xs text-gray-500 mb-2 space-x-2">
+          <span className="text-gray-900 font-medium">{headerParts.join(' · ')}</span>
+          {messageId && <ClickableId label="id" id={messageId} />}
+          {responseId && <ClickableId label="response" id={responseId} />}
+          {callId && <ClickableId label="call" id={callId} />}
         </div>
         {text && (
           <div className="text-sm text-gray-900 whitespace-pre-wrap">{text}</div>
@@ -186,9 +219,11 @@ function ConversationItem({ item, showJson }) {
     
     return (
       <div className="border border-blue-200 rounded-lg p-3 bg-blue-50">
-        <div className="text-xs text-gray-600 mb-2">
-          {headerParts.join(' · ')}
-          {extras.length > 0 && <span className="text-gray-400"> ({extras.join(', ')})</span>}
+        <div className="text-xs text-gray-500 mb-2 space-x-2">
+          <span className="text-gray-900 font-medium">{headerParts.join(' · ')}</span>
+          {messageId && <ClickableId label="id" id={messageId} />}
+          {responseId && <ClickableId label="response" id={responseId} />}
+          {callId && <ClickableId label="call" id={callId} />}
         </div>
         <div className="text-sm font-medium text-gray-900 mb-1">File Search</div>
         {queries.length > 0 && (
@@ -200,7 +235,18 @@ function ConversationItem({ item, showJson }) {
           </div>
         )}
         {results.length > 0 && (
-          <div className="text-xs text-gray-600">{results.length} result{results.length > 1 ? 's' : ''} found</div>
+          <div className="text-xs text-gray-600 mb-2">{results.length} result{results.length > 1 ? 's' : ''} found</div>
+        )}
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer"
+        >
+          {expanded ? 'Hide details' : 'Show details'}
+        </button>
+        {expanded && (
+          <pre className="mt-2 text-xs bg-white p-2 rounded border border-gray-200 overflow-auto">
+            {JSON.stringify(item, null, 2)}
+          </pre>
         )}
       </div>
     )
@@ -212,9 +258,11 @@ function ConversationItem({ item, showJson }) {
     
     return (
       <div className="border border-green-200 rounded-lg p-3 bg-green-50">
-        <div className="text-xs text-gray-600 mb-2">
-          {headerParts.join(' · ')}
-          {extras.length > 0 && <span className="text-gray-400"> ({extras.join(', ')})</span>}
+        <div className="text-xs text-gray-500 mb-2 space-x-2">
+          <span className="text-gray-900 font-medium">{headerParts.join(' · ')}</span>
+          {messageId && <ClickableId label="id" id={messageId} />}
+          {responseId && <ClickableId label="response" id={responseId} />}
+          {callId && <ClickableId label="call" id={callId} />}
         </div>
         <div className="text-sm font-medium text-gray-900 mb-1">Code Interpreter</div>
         {code && (
@@ -223,7 +271,18 @@ function ConversationItem({ item, showJson }) {
           </pre>
         )}
         {outputs.length > 0 && (
-          <div className="text-xs text-gray-600">{outputs.length} output{outputs.length > 1 ? 's' : ''}</div>
+          <div className="text-xs text-gray-600 mb-2">{outputs.length} output{outputs.length > 1 ? 's' : ''}</div>
+        )}
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer"
+        >
+          {expanded ? 'Hide details' : 'Show details'}
+        </button>
+        {expanded && (
+          <pre className="mt-2 text-xs bg-white p-2 rounded border border-gray-200 overflow-auto">
+            {JSON.stringify(item, null, 2)}
+          </pre>
         )}
       </div>
     )
@@ -232,17 +291,24 @@ function ConversationItem({ item, showJson }) {
   // Generic fallback for unknown types
   return (
     <div className="border border-purple-200 rounded-lg p-3 bg-purple-50">
-      <div className="text-xs text-gray-600 mb-2">
-        {headerParts.join(' · ')}
-        {extras.length > 0 && <span className="text-gray-400"> ({extras.join(', ')})</span>}
+      <div className="text-xs text-gray-500 mb-2 space-x-2">
+        <span className="text-gray-900 font-medium">{headerParts.join(' · ')}</span>
+        {messageId && <ClickableId label="id" id={messageId} />}
+        {responseId && <ClickableId label="response" id={responseId} />}
+        {callId && <ClickableId label="call" id={callId} />}
       </div>
       <div className="text-sm font-medium text-gray-900 mb-2">Unknown Type: {itemType}</div>
-      <details className="text-xs">
-        <summary className="cursor-pointer text-blue-600 hover:text-blue-700">View raw data</summary>
-        <pre className="mt-2 bg-white p-2 rounded border border-gray-200 overflow-auto">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer"
+      >
+        {expanded ? 'Hide details' : 'Show details'}
+      </button>
+      {expanded && (
+        <pre className="mt-2 text-xs bg-white p-2 rounded border border-gray-200 overflow-auto">
           {JSON.stringify(item, null, 2)}
         </pre>
-      </details>
+      )}
     </div>
   )
 }
