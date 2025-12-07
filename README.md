@@ -4,6 +4,9 @@ A lightweight CLI for Microsoft Foundry Agent Service.
 Now updated to Support for [Foundry Agent Service v2](https://learn.microsoft.com/en-us/azure/ai-foundry/agents/overview?view=foundry)
 as well as [v1 (Classic)](https://learn.microsoft.com/en-us/azure/ai-foundry/agents/overview?view=foundry-classic)
 
+# New UI! Foundry Agent Service Explorer
+I created a frontend to make it easier to browse - [GO HERE](ui/README.md)
+
 ## Requirements
 - Node runtime (Node >=22, ESM)
 - Auth via  [DefaultAzureCredential](https://learn.microsoft.com/en-gb/azure/developer/javascript/sdk/authentication/credential-chains#defaultazurecredential-overview) (easiest via [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest))
