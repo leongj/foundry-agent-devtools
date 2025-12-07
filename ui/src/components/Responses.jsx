@@ -1,6 +1,227 @@
 import { useState } from 'react'
 import { formatDate, extractTextFromContent, truncateText } from '../utils'
 
+// Helper to extract text from content chunks
+function extractContentText(content) {
+  if (!content) return ''
+  if (typeof content === 'string') return content
+  
+  const chunks = Array.isArray(content) ? content : [content]
+  const texts = []
+  
+  for (const chunk of chunks) {
+    if (typeof chunk === 'string') {
+      texts.push(chunk)
+    } else if (chunk?.text) {
+      texts.push(typeof chunk.text === 'string' ? chunk.text : chunk.text?.value || '')
+    } else if (chunk?.value) {
+      texts.push(String(chunk.value))
+    } else if (chunk?.type === 'input_text' || chunk?.type === 'output_text') {
+      texts.push(chunk.text || '')
+    }
+  }
+  
+  return texts.filter(Boolean).join('\n\n')
+}
+
+// Helper to count annotations/citations
+function countAnnotations(content) {
+  if (!Array.isArray(content)) return 0
+  let count = 0
+  for (const chunk of content) {
+    const annotations = chunk?.text?.annotations || chunk?.annotations || []
+    count += annotations.length
+  }
+  return count
+}
+
+// Clickable ID component with copy-to-clipboard and tooltip
+function ClickableId({ label, id }) {
+  const [copied, setCopied] = useState(false)
+  const [showTooltip, setShowTooltip] = useState(false)
+
+  const handleClick = async (e) => {
+    e.stopPropagation()
+    await navigator.clipboard.writeText(id)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <span className="relative inline-block">
+      <span
+        onClick={handleClick}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        className="cursor-pointer hover:text-gray-700 transition-colors"
+      >
+        {label}: {id}
+      </span>
+      {(showTooltip || copied) && (
+        <span className="absolute left-0 -top-8 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+          {copied ? '✓ Copied!' : 'Click to copy'}
+        </span>
+      )}
+    </span>
+  )
+}
+
+// Render a single output item based on its type
+function OutputItem({ item, showJson }) {
+  const [expanded, setExpanded] = useState(false)
+  const itemType = item.type || 'message'
+  const timestamp = item.created_at ? formatDate(item.created_at * 1000) : ''
+  const role = item.role || ''
+  
+  // Build header info
+  const headerParts = []
+  if (timestamp) headerParts.push(timestamp)
+  if (role) headerParts.push(role)
+  if (itemType !== 'message') headerParts.push(`[${itemType}]`)
+  
+  const messageId = item.id
+  const responseId = item.created_by?.response_id
+  const callId = item.call_id
+  
+  if (showJson) {
+    return (
+      <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+        <div className="text-xs text-gray-600 mb-2">{headerParts.join(' · ')}</div>
+        <pre className="text-xs overflow-auto bg-white p-2 rounded border border-gray-200">
+          {JSON.stringify(item, null, 2)}
+        </pre>
+      </div>
+    )
+  }
+
+  // Render based on type
+  if (itemType === 'message') {
+    const text = extractContentText(item.content)
+    const annotationCount = countAnnotations(item.content)
+    const attachmentCount = Array.isArray(item.attachments) ? item.attachments.length : 0
+    
+    return (
+      <div className="border border-gray-200 rounded-lg p-3 bg-white hover:bg-gray-200 transition-colors">
+        <div className="text-xs text-gray-500 mb-2 space-x-2">
+          <span className="text-gray-900 font-medium">{headerParts.join(' · ')}</span>
+          {messageId && <ClickableId label="id" id={messageId} />}
+          {responseId && <ClickableId label="response" id={responseId} />}
+          {callId && <ClickableId label="call" id={callId} />}
+        </div>
+        {text && (
+          <div className="text-sm text-gray-900 whitespace-pre-wrap">{text}</div>
+        )}
+        {(annotationCount > 0 || attachmentCount > 0) && (
+          <div className="mt-2 text-xs text-gray-500">
+            {annotationCount > 0 && <span>{annotationCount} citation{annotationCount > 1 ? 's' : ''}</span>}
+            {annotationCount > 0 && attachmentCount > 0 && <span> · </span>}
+            {attachmentCount > 0 && <span>{attachmentCount} attachment{attachmentCount > 1 ? 's' : ''}</span>}
+          </div>
+        )}
+      </div>
+    )
+  }
+  
+  if (itemType === 'file_search_call') {
+    const queries = item.queries || []
+    const results = item.results || []
+    
+    return (
+      <div className="border border-blue-200 rounded-lg p-3 bg-blue-50 hover:bg-blue-100 transition-colors">
+        <div className="text-xs text-gray-500 mb-2 space-x-2">
+          <span className="text-gray-900 font-medium">{headerParts.join(' · ')}</span>
+          {messageId && <ClickableId label="id" id={messageId} />}
+          {responseId && <ClickableId label="response" id={responseId} />}
+          {callId && <ClickableId label="call" id={callId} />}
+        </div>
+        <div className="text-sm font-medium text-gray-900 mb-1">File Search</div>
+        {queries.length > 0 && (
+          <div className="mb-2">
+            <div className="text-xs text-gray-600 mb-1">Queries:</div>
+            <ul className="list-disc list-inside text-sm text-gray-700">
+              {queries.map((q, i) => <li key={i}>{q}</li>)}
+            </ul>
+          </div>
+        )}
+        {results.length > 0 && (
+          <div className="text-xs text-gray-600 mb-2">{results.length} result{results.length > 1 ? 's' : ''} found</div>
+        )}
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer"
+        >
+          {expanded ? 'Hide details' : 'Show details'}
+        </button>
+        {expanded && (
+          <pre className="mt-2 text-xs bg-white p-2 rounded border border-gray-200 overflow-auto">
+            {JSON.stringify(item, null, 2)}
+          </pre>
+        )}
+      </div>
+    )
+  }
+  
+  if (itemType === 'code_interpreter_call') {
+    const code = item.code || ''
+    const outputs = item.outputs || []
+    
+    return (
+      <div className="border border-green-200 rounded-lg p-3 bg-green-50 hover:bg-green-100 transition-colors">
+        <div className="text-xs text-gray-500 mb-2 space-x-2">
+          <span className="text-gray-900 font-medium">{headerParts.join(' · ')}</span>
+          {messageId && <ClickableId label="id" id={messageId} />}
+          {responseId && <ClickableId label="response" id={responseId} />}
+          {callId && <ClickableId label="call" id={callId} />}
+        </div>
+        <div className="text-sm font-medium text-gray-900 mb-1">Code Interpreter</div>
+        {code && (
+          <pre className="text-xs bg-white p-2 rounded border border-gray-200 overflow-auto mb-2">
+            {code}
+          </pre>
+        )}
+        {outputs.length > 0 && (
+          <div className="text-xs text-gray-600 mb-2">{outputs.length} output{outputs.length > 1 ? 's' : ''}</div>
+        )}
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer"
+        >
+          {expanded ? 'Hide details' : 'Show details'}
+        </button>
+        {expanded && (
+          <pre className="mt-2 text-xs bg-white p-2 rounded border border-gray-200 overflow-auto">
+            {JSON.stringify(item, null, 2)}
+          </pre>
+        )}
+      </div>
+    )
+  }
+  
+  // Generic fallback for unknown types
+  return (
+    <div className="border border-purple-200 rounded-lg p-3 bg-purple-50 hover:bg-purple-100 transition-colors">
+      <div className="text-xs text-gray-500 mb-2 space-x-2">
+        <span className="text-gray-900 font-medium">{headerParts.join(' · ')}</span>
+        {messageId && <ClickableId label="id" id={messageId} />}
+        {responseId && <ClickableId label="response" id={responseId} />}
+        {callId && <ClickableId label="call" id={callId} />}
+      </div>
+      <div className="text-sm font-medium text-gray-900 mb-2">Unknown Type: {itemType}</div>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer"
+      >
+        {expanded ? 'Hide details' : 'Show details'}
+      </button>
+      {expanded && (
+        <pre className="mt-2 text-xs bg-white p-2 rounded border border-gray-200 overflow-auto">
+          {JSON.stringify(item, null, 2)}
+        </pre>
+      )}
+    </div>
+  )
+}
+
 export function ResponseCard({ response }) {
   const getContentPreview = (resp) => {
     if (!Array.isArray(resp?.output)) return ''
@@ -203,7 +424,6 @@ function ToolsSection({ response }) {
 function ResponseSummary({ response }) {
   const basicInfo = [
     ['Status', response.status],
-    ['Created', formatDate(response.created_at * 1000)],
     ['Background', response.background !== undefined ? String(response.background) : undefined],
     ['Conversation ID', response.conversation?.id]
   ]
@@ -241,7 +461,23 @@ function ResponseSummary({ response }) {
   return (
     <div className="space-y-6">
       <AttributeGroup title="Basic Information" entries={basicInfo} />
-      <AttributeGroup title="Agent" entries={agentInfo} />
+      <div className="mb-6">
+        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">Agent</h4>
+        <dl className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {agentInfo.filter(([, value]) => value !== undefined && value !== null && value !== '').map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-xs uppercase tracking-wider text-gray-500 mb-1">{label}</dt>
+              <dd className="text-sm font-medium text-gray-900 break-words">{String(value)}</dd>
+            </div>
+          ))}
+        </dl>
+        {response.instructions && (
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <h5 className="text-xs uppercase tracking-wider text-gray-500 mb-1">Instructions</h5>
+            <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">{response.instructions}</p>
+          </div>
+        )}
+      </div>
       <AttributeGroup title="Model Settings" entries={modelSettings} />
       <ToolsSection response={response} />
       <AttributeGroup title="Token Usage" entries={usage} />
@@ -251,87 +487,23 @@ function ResponseSummary({ response }) {
   )
 }
 
-function ResponseOutputTable({ response }) {
-  const entries = Array.isArray(response?.output) ? response.output : []
+function ResponseOutputItems({ response, showJson }) {
+  const items = Array.isArray(response?.output) ? response.output : []
 
-  if (entries.length === 0) {
+  if (items.length === 0) {
     return (
-      <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">#</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Type</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Role</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">ID</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Preview</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colSpan="5" className="px-4 py-8 text-center text-gray-600">No output entries.</td>
-            </tr>
-          </tbody>
-        </table>
+      <div className="border border-dashed border-gray-300 rounded-xl p-8 text-center text-gray-500">
+        No output items
       </div>
     )
   }
 
-  const getPreview = (entry) => {
-    if (Array.isArray(entry.content)) {
-      return extractTextFromContent(entry.content)
-    }
-    return ''
-  }
-
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
-      <table className="w-full">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">#</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Type</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Role</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">ID</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Preview</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {entries.slice(0, 20).map((entry, idx) => (
-            <tr key={entry.id || idx} className="hover:bg-gray-50">
-              <td className="px-4 py-3 text-sm text-gray-900">{idx + 1}</td>
-              <td className="px-4 py-3 text-sm text-gray-700">{entry.type || 'message'}</td>
-              <td className="px-4 py-3 text-sm text-gray-700">{entry.role || 'assistant'}</td>
-              <td className="px-4 py-3 text-sm text-gray-700">{entry.id || '—'}</td>
-              <td className="px-4 py-3 text-sm text-gray-700">{truncateText(getPreview(entry))}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-2">
+      {items.map((item, idx) => (
+        <OutputItem key={item.id || idx} item={item} showJson={showJson} />
+      ))}
     </div>
-  )
-}
-
-function ResponseOutput({ response }) {
-  const outputs = []
-  ;(response.output || []).forEach(entry => {
-    if (entry.content && Array.isArray(entry.content)) {
-      entry.content.forEach(chunk => {
-        if (chunk.type === 'output_text' && chunk.text) {
-          outputs.push(chunk.text)
-        }
-      })
-    }
-  })
-
-  const text = outputs.length > 0
-    ? outputs.join('\n\n')
-    : 'No assistant output found.'
-
-  return (
-    <pre className="bg-white border border-gray-200 rounded-lg p-4 text-sm whitespace-pre-wrap break-words font-mono text-gray-900">
-      {text}
-    </pre>
   )
 }
 
@@ -399,6 +571,7 @@ export function ResponseDetail({ response, loading, error }) {
         <div className="flex items-baseline gap-3">
           <h3 className="text-lg font-semibold text-gray-900">Response</h3>
           <span className="text-sm text-gray-500 font-mono">{response.id}</span>
+          <span className="text-sm text-gray-500">· {formatDate(response.created_at * 1000)}</span>
         </div>
         <button
           onClick={() => setShowJson(true)}
@@ -409,15 +582,11 @@ export function ResponseDetail({ response, loading, error }) {
       </div>
       
       <div className="p-4 space-y-6">
-        <ResponseSummary response={response} />
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-3">Output</h3>
-          <ResponseOutput response={response} />
+          <ResponseOutputItems response={response} showJson={showJson} />
         </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">Output Entries</h3>
-          <ResponseOutputTable response={response} />
-        </div>
+        <ResponseSummary response={response} />
       </div>
     </div>
   )
