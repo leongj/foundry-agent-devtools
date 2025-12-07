@@ -16,26 +16,6 @@ npm start
 
 Then Ctrl+click on the link provided
 
-## Code Reduction
-
-**Before (Vanilla JS):**
-- `app.js`: 474 lines
-- `styles.css`: 513 lines
-- `index.html`: 177 lines
-- **Total: ~1,164 lines of UI code**
-
-**After (React + Tailwind):**
-- `App.jsx`: 256 lines
-- `hooks.js`: 95 lines
-- `components/Agents.jsx`: 102 lines
-- `components/Conversations.jsx`: 165 lines
-- `components/Responses.jsx`: 138 lines
-- `utils.js`: 22 lines
-- `index.css`: 10 lines
-- **Total: ~788 lines of UI code**
-
-**Result: ~32% code reduction** while maintaining all features (Agents, Conversations, Responses tabs).
-
 ## Features
 
 - ✅ **Agents view**: Browse agents with grid and table layouts
