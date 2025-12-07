@@ -157,7 +157,7 @@ export function AgentDetail({ agent }) {
       <div className="p-4 flex justify-between items-center border-b border-gray-200">
         <div className="flex items-baseline gap-3">
           <h3 className="text-lg font-semibold text-gray-900">{agent.name}</h3>
-          <span className="text-sm text-gray-500">v{latestVersion?.version || '—'}</span>
+          <span className="text-sm text-gray-500">version: {latestVersion?.version || '—'}</span>
         </div>
         <button
           onClick={() => setShowJson(true)}
