@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useAgents, useConversations, useConversationDetails, useResponse } from './hooks'
+import { useAgents, useConversations, useConversationDetails, useResponses, useResponseDetails } from './hooks'
 import { AgentsList, AgentsTable, AgentDetail } from './components/Agents'
 import { ConversationsList, ConversationsTable, ConversationDetail } from './components/Conversations'
-import { ResponseView, ResponsesTable } from './components/Responses'
+import { ResponsesList, ResponsesTable, ResponseDetail } from './components/Responses'
 
 const STORAGE_KEY = 'aza-ui-settings'
 const DEFAULT_PROJECT = 'https://aifoundry-au.services.ai.azure.com/api/projects/aiproject1'
@@ -76,11 +76,13 @@ function App() {
   const [activeTab, setActiveTab] = useState('agents')
   const [selectedAgent, setSelectedAgent] = useState(null)
   const [selectedConversation, setSelectedConversation] = useState(null)
+  const [selectedResponse, setSelectedResponse] = useState(null)
 
   const agentsData = useAgents(config)
   const conversationsData = useConversations(config)
   const conversationDetailsData = useConversationDetails(config, selectedConversation?.id)
-  const responseData = useResponse()
+  const responsesData = useResponses(config)
+  const responseDetailsData = useResponseDetails(config, selectedResponse?.id)
 
   useEffect(() => {
     saveSettings(config)
@@ -186,28 +188,34 @@ function App() {
             <section className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Response payload</h2>
+                  <h2 className="text-xl font-semibold text-gray-900">Responses</h2>
                 </div>
                 <div className="flex items-center gap-4">
-                  {responseData.loadedAt && (
+                  {responsesData.fetchedAt && (
                     <span className="text-sm text-gray-600">
-                      Last updated {new Date(responseData.loadedAt).toLocaleString()}
+                      Last updated {new Date(responsesData.fetchedAt).toLocaleString()}
                     </span>
                   )}
+                  <button
+                    onClick={responsesData.refresh}
+                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-full text-sm font-medium transition-colors"
+                  >
+                    Refresh
+                  </button>
                 </div>
               </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Pulled from <code className="bg-gray-200 px-2 py-0.5 rounded">example_resp_message.json</code>. 
-                Great for quickly checking temperature, tool usage, and instructions applied to a run.
-              </p>
-              <ResponsesTable response={responseData.response} />
+              <ResponsesTable 
+                responses={responsesData.responses}
+                selectedResponse={selectedResponse}
+                onSelectResponse={setSelectedResponse}
+              />
             </section>
 
             <section className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/50 p-6">
-              <ResponseView
-                response={responseData.response}
-                loading={responseData.loading}
-                error={responseData.error}
+              <ResponseDetail
+                response={responseDetailsData.response}
+                loading={responseDetailsData.loading}
+                error={responseDetailsData.error}
               />
             </section>
           </div>

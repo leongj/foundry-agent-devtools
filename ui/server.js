@@ -35,6 +35,14 @@ const server = createServer(async (req, res) => {
       await handleConversationItemsRequest(requestUrl, res);
       return;
     }
+    if (requestUrl.pathname === '/api/responses') {
+      await handleResponsesRequest(requestUrl, res);
+      return;
+    }
+    if (requestUrl.pathname.startsWith('/api/responses/')) {
+      await handleResponseDetailsRequest(requestUrl, res);
+      return;
+    }
     if (requestUrl.pathname === '/api/examples/conversations') {
       await handleExampleRequest('conversations.json', res);
       return;
@@ -260,5 +268,62 @@ async function handleExampleRequest(filename, res) {
   } catch (err) {
     console.error('[server] failed to read example', filename, err);
     sendJson(res, 500, { error: 'Failed to load example data' });
+  }
+}
+
+async function handleResponsesRequest(url, res) {
+  try {
+    const ctx = buildRequestContext(url);
+    const query = { 'api-version': V2_AGENT_API_VERSION };
+    if (ctx.limit) query.limit = ctx.limit;
+    if (ctx.order) query.order = ctx.order;
+    if (ctx.after) query.after = ctx.after;
+    if (ctx.before) query.before = ctx.before;
+    
+    const payload = await apiRequest(ctx, 'openai/responses', { query });
+    const responses = normalizeResponses(payload);
+    sendJson(res, 200, {
+      responses,
+      total: responses.length,
+      fetchedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    if (err.code === 'USAGE') {
+      sendJson(res, 400, { error: err.message });
+      return;
+    }
+    const status = err.status && Number.isInteger(err.status) ? err.status : 500;
+    sendJson(res, status, { error: err.message || 'Failed to load responses' });
+  }
+}
+
+function normalizeResponses(payload) {
+  const rawList = payload?.responses || payload?.data || payload?.items || payload;
+  const rows = Array.isArray(rawList) ? rawList : rawList ? [rawList] : [];
+  return rows;
+}
+
+async function handleResponseDetailsRequest(url, res) {
+  try {
+    const ctx = buildRequestContext(url);
+    // Extract response ID from path like /api/responses/{id}
+    const match = url.pathname.match(/\/api\/responses\/([^/]+)$/);
+    if (!match || !match[1]) {
+      sendJson(res, 400, { error: 'Invalid response ID' });
+      return;
+    }
+    const responseId = match[1];
+    
+    const query = { 'api-version': V2_AGENT_API_VERSION };
+    
+    const payload = await apiRequest(ctx, `openai/responses/${responseId}`, { query });
+    sendJson(res, 200, payload);
+  } catch (err) {
+    if (err.code === 'USAGE') {
+      sendJson(res, 400, { error: err.message });
+      return;
+    }
+    const status = err.status && Number.isInteger(err.status) ? err.status : 500;
+    sendJson(res, status, { error: err.message || 'Failed to load response details' });
   }
 }

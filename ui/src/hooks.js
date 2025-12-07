@@ -148,22 +148,85 @@ export function useConversationDetails(config, conversationId) {
   return { items, loading, error }
 }
 
-export function useResponse() {
+export function useResponses(config) {
+  const [responses, setResponses] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [fetchedAt, setFetchedAt] = useState(null)
+
+  const fetchResponses = async () => {
+    const { project, limit, order } = config
+    if (!project) return
+
+    const params = new URLSearchParams({ project })
+    if (limit) params.set('limit', limit)
+    if (order) params.set('order', order)
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/responses?${params}`)
+      if (!response.ok) {
+        const text = await response.text()
+        try {
+          const payload = JSON.parse(text)
+          throw new Error(payload.error || 'Failed to load responses')
+        } catch {
+          throw new Error(text || 'Failed to load responses')
+        }
+      }
+      const data = await response.json()
+      setResponses(data.responses || [])
+      setFetchedAt(data.fetchedAt)
+    } catch (err) {
+      setError(err.message)
+      setResponses([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (config.project) {
+      fetchResponses()
+    }
+  }, [config.project, config.limit, config.order])
+
+  return { responses, loading, error, fetchedAt, refresh: fetchResponses }
+}
+
+export function useResponseDetails(config, responseId) {
   const [response, setResponse] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [loadedAt, setLoadedAt] = useState(null)
 
   useEffect(() => {
-    const fetchData = async () => {
+    if (!responseId || !config.project) {
+      setResponse(null)
+      setError(null)
+      return
+    }
+
+    const fetchDetails = async () => {
+      const params = new URLSearchParams({ project: config.project })
+
       setLoading(true)
       setError(null)
+
       try {
-        const res = await fetch('/api/examples/response')
-        if (!res.ok) throw new Error('Failed to load sample response')
-        const payload = await res.json()
-        setResponse(payload)
-        setLoadedAt(new Date().toISOString())
+        const res = await fetch(`/api/responses/${responseId}?${params}`)
+        if (!res.ok) {
+          const text = await res.text()
+          try {
+            const payload = JSON.parse(text)
+            throw new Error(payload.error || 'Failed to load response details')
+          } catch {
+            throw new Error(text || 'Failed to load response details')
+          }
+        }
+        const data = await res.json()
+        setResponse(data)
       } catch (err) {
         setError(err.message)
         setResponse(null)
@@ -171,8 +234,9 @@ export function useResponse() {
         setLoading(false)
       }
     }
-    fetchData()
-  }, [])
 
-  return { response, loading, error, loadedAt }
+    fetchDetails()
+  }, [config.project, responseId])
+
+  return { response, loading, error }
 }

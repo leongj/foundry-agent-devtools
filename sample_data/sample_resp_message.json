@@ -5,81 +5,90 @@
   "user": null,
   "service_tier": "default",
   "top_logprobs": 0,
-  "model": "gpt-4o",
-  "reasoning": {},
+  "model": "gpt-4o-2024-11-20",
   "background": false,
-  "text": {
-    "format": {
-      "type": "text"
-    },
-    "verbosity": "medium"
-  },
   "tools": [
     {
-      "type": "remote_tool",
-      "tool_arguments": [
-        {
-          "arguments": {
-            "knowledge_sources": [
-              {
-                "connection_id": "/subscriptions/f7634aec-15b2-4913-8511-d8deda3bcdc0/resourceGroups/rg-foundry-au/providers/Microsoft.CognitiveServices/accounts/aifoundry-au/projects/aiproject1/connections/binggrounding",
-                "query_parameters": {
-                  "top_k_results": 5,
-                  "language": "en",
-                  "market": "en-us"
-                }
-              }
-            ]
-          },
-          "description": null,
-          "name": "bing_grounding"
-        }
-      ]
+      "type": "code_interpreter",
+      "container": {
+        "files": [
+          {
+            "id": "assistant-UCRwCzVeuxNwBSJ1NmR2w2",
+            "filename": null,
+            "mime_type": null
+          }
+        ],
+        "memory_limit": null
+      }
+    },
+    {
+      "type": "file_search",
+      "vector_store_ids": [
+        "vs_PpRcHhjNDq4XaCTP57HRNhVd"
+      ],
+      "max_num_results": 20,
+      "ranking_options": {
+        "ranker": "auto",
+        "score_threshold": 0,
+        "hybrid_search": null
+      }
     }
   ],
   "tool_choice": "auto",
   "truncation": "disabled",
-  "id": "resp_52471b00a6e8390c0069334f9686f481909b90ccbc9a90052d",
+  "id": "resp_d3ae21a79bbbcc380069335d1badf481908f8a63bdc9477916",
   "object": "response",
   "status": "completed",
-  "created_at": 1764970390,
+  "created_at": 1764973851,
   "error": null,
   "incomplete_details": null,
   "output": [
     {
       "type": "message",
-      "id": "msg_52471b00a6e8390c0069334f97503881909007f1c95aaecaa8",
+      "id": "msg_d3ae21a79bbbcc380069335d1e110c8190ba339a8bd8f97e72",
+      "created_by": {
+        "agent": {
+          "type": "agent_id",
+          "name": "agent1",
+          "version": "4"
+        },
+        "response_id": "resp_d3ae21a79bbbcc380069335d1badf481908f8a63bdc9477916"
+      },
+      "partition_key": "d3ae21a79bbbcc3800",
       "status": "completed",
       "role": "assistant",
       "content": [
         {
           "type": "output_text",
-          "text": "Arrr, why couldn't the pirate finish his alphabet lesson?  \n\nBecause he always got stuck at \"C\"! 🏴‍☠️",
+          "text": "It looks like you've uploaded a file named \"nifty_500_quarterly_results.csv.\" How can I assist you with it? Would you like me to analyze or retrieve specific information from this file?",
           "annotations": [],
           "logprobs": []
         }
       ]
     }
   ],
-  "instructions": "You always talk like a pirate",
+  "instructions": "You always talk like captain raymond holt",
   "usage": {
-    "input_tokens": 761,
-    "input_tokens_details": {
-      "cached_tokens": 0
+    "input_tokens": 1755,
+    "input_tokens_details": null,
+    "output_tokens": 43,
+    "output_tokens_details": null,
+    "total_tokens": 1798,
+    "input_token_details": {
+      "cached_tokens": 1024
     },
-    "output_tokens": 31,
-    "output_tokens_details": {
+    "output_token_details": {
       "reasoning_tokens": 0
-    },
-    "total_tokens": 792
+    }
   },
   "parallel_tool_calls": true,
   "conversation": {
-    "id": "conv_52471b00a6e8390c00yCXIJRZDoszRyfivZtEH3XzgGPrCfqo1"
+    "id": "conv_d3ae21a79bbbcc3800lbHkK6CtNFMQ3zyuxEDUx6nHoJbE6iqM"
   },
   "agent": {
     "type": "agent_id",
     "name": "agent1",
-    "version": "2"
-  }
+    "version": "4"
+  },
+  "structured_inputs": {}
 }
