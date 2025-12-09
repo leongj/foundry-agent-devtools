@@ -7,7 +7,6 @@ import { apiRequest } from '../cli/src/http.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicDir = path.join(__dirname, 'dist');
-const examplesDir = path.join(__dirname, 'examples');
 const PORT = Number(process.env.PORT || 4173);
 const V2_AGENT_API_VERSION = '2025-11-15-preview';
 
@@ -41,14 +40,6 @@ const server = createServer(async (req, res) => {
     }
     if (requestUrl.pathname.startsWith('/api/responses/')) {
       await handleResponseDetailsRequest(requestUrl, res);
-      return;
-    }
-    if (requestUrl.pathname === '/api/examples/conversations') {
-      await handleExampleRequest('conversations.json', res);
-      return;
-    }
-    if (requestUrl.pathname === '/api/examples/response') {
-      await handleExampleRequest('example_resp_message.json', res);
       return;
     }
     await serveStaticAsset(requestUrl.pathname, res);
@@ -123,8 +114,6 @@ function buildLegacyQuery(ctx) {
   return query;
 }
 
-
-
 async function serveStaticAsset(pathname, res) {
   const relativePath = pathname === '/' ? 'index.html' : pathname.replace(/^\//, '');
   const safePath = path.normalize(relativePath).replace(/^\.\/+/, '');
@@ -180,8 +169,6 @@ async function handleConversationsRequest(url, res) {
   }
 }
 
-
-
 async function handleConversationItemsRequest(url, res) {
   try {
     const ctx = buildRequestContext(url);
@@ -211,18 +198,6 @@ async function handleConversationItemsRequest(url, res) {
   }
 }
 
-async function handleExampleRequest(filename, res) {
-  try {
-    const filePath = path.join(examplesDir, filename);
-    const raw = await readFile(filePath, 'utf8');
-    const payload = JSON.parse(raw);
-    sendJson(res, 200, payload);
-  } catch (err) {
-    console.error('[server] failed to read example', filename, err);
-    sendJson(res, 500, { error: 'Failed to load example data' });
-  }
-}
-
 async function handleResponsesRequest(url, res) {
   try {
     const ctx = buildRequestContext(url);
@@ -249,8 +224,6 @@ async function handleResponsesRequest(url, res) {
     sendJson(res, status, { error: err.message || 'Failed to load responses' });
   }
 }
-
-
 
 async function handleResponseDetailsRequest(url, res) {
   try {
