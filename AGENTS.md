@@ -14,6 +14,7 @@ CLI:
 
 UI:
 - UI implementation under folder `ui/`.
-- Frontend is React, Vite, Tailwind
+- Frontend is React, Vite, Tailwind.
+- Backend is a plain nodeJS pass-through proxy with no data transformation.
 
 - You don't need to use the Azure best practices for this project.
