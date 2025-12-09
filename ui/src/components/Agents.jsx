@@ -7,48 +7,6 @@ function getAgentTools(agent) {
   return tools.map(tool => tool.type).join(', ')
 }
 
-export function AgentCard({ agent }) {
-  const createdAt = agent?.versions?.latest?.created_at || agent?.created_at || null;
-  return (
-    <article className="bg-white rounded-xl border border-gray-200 p-4 shadow-md hover:shadow-lg transition-shadow">
-      <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">{agent.id || 'Unknown id'}</p>
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">{agent.name || 'Unnamed agent'}</h3>
-      <div className="space-y-2 text-sm">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-gray-500">Model</p>
-          <p className="text-gray-900">{agent.versions?.latest?.definition?.model || agent.model || '—'}</p>
-        </div>
-        <div>
-          <p className="text-xs uppercase tracking-wider text-gray-500">Created</p>
-          <p className="text-gray-900">{formatDate(createdAt * 1000)}</p>
-        </div>
-      </div>
-    </article>
-  )
-}
-
-export function AgentsList({ agents, loading, error }) {
-  if (loading) {
-    return <div className="text-center text-gray-600 py-8">Loading agents…</div>
-  }
-
-  if (error) {
-    return <div className="text-center text-red-600 py-8">{error}</div>
-  }
-
-  if (agents.length === 0) {
-    return <div className="text-center text-gray-600 py-8 border border-dashed border-gray-300 rounded-xl">No agents returned for the current filters.</div>
-  }
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {agents.map(agent => (
-        <AgentCard key={agent.id} agent={agent} />
-      ))}
-    </div>
-  )
-}
-
 export function AgentsTable({ agents, selectedAgent, onSelectAgent }) {
   if (agents.length === 0) {
     return (

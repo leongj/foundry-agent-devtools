@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useAgents, useConversations, useConversationDetails, useResponses, useResponseDetails } from './hooks'
-import { AgentsList, AgentsTable, AgentDetail } from './components/Agents'
-import { ConversationsList, ConversationsTable, ConversationDetail } from './components/Conversations'
-import { ResponsesList, ResponsesTable, ResponseDetail } from './components/Responses'
+import { AgentsTable, AgentDetail } from './components/Agents'
+import { ConversationsTable, ConversationDetail } from './components/Conversations'
+import { ResponsesTable, ResponseDetail } from './components/Responses'
 
 const STORAGE_KEY = 'aza-ui-settings'
 const DEFAULT_PROJECT = 'https://aifoundry-au.services.ai.azure.com/api/projects/aiproject1'

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { parseErrorResponse } from './utils'
 
 export function useAgents(config) {
   const [agents, setAgents] = useState([])
@@ -21,13 +22,7 @@ export function useAgents(config) {
     try {
       const response = await fetch(`/api/agents?${params}`)
       if (!response.ok) {
-        const text = await response.text()
-        try {
-          const payload = JSON.parse(text)
-          throw new Error(payload.error || 'Failed to load agents')
-        } catch {
-          throw new Error(text || 'Failed to load agents')
-        }
+        await parseErrorResponse(response, 'Failed to load agents')
       }
       const data = await response.json()
       setAgents(data.agents || [])
@@ -69,13 +64,7 @@ export function useConversations(config) {
     try {
       const response = await fetch(`/api/conversations?${params}`)
       if (!response.ok) {
-        const text = await response.text()
-        try {
-          const payload = JSON.parse(text)
-          throw new Error(payload.error || 'Failed to load conversations')
-        } catch {
-          throw new Error(text || 'Failed to load conversations')
-        }
+        await parseErrorResponse(response, 'Failed to load conversations')
       }
       const data = await response.json()
       setConversations(data.conversations || [])
@@ -122,13 +111,7 @@ export function useConversationDetails(config, conversationId) {
       try {
         const response = await fetch(`/api/conversations/${conversationId}/items?${params}`)
         if (!response.ok) {
-          const text = await response.text()
-          try {
-            const payload = JSON.parse(text)
-            throw new Error(payload.error || 'Failed to load conversation details')
-          } catch {
-            throw new Error(text || 'Failed to load conversation details')
-          }
+          await parseErrorResponse(response, 'Failed to load conversation details')
         }
         const data = await response.json()
         // Handle different response structures
@@ -168,13 +151,7 @@ export function useResponses(config) {
     try {
       const response = await fetch(`/api/responses?${params}`)
       if (!response.ok) {
-        const text = await response.text()
-        try {
-          const payload = JSON.parse(text)
-          throw new Error(payload.error || 'Failed to load responses')
-        } catch {
-          throw new Error(text || 'Failed to load responses')
-        }
+        await parseErrorResponse(response, 'Failed to load responses')
       }
       const data = await response.json()
       setResponses(data.responses || [])
@@ -217,13 +194,7 @@ export function useResponseDetails(config, responseId) {
       try {
         const res = await fetch(`/api/responses/${responseId}?${params}`)
         if (!res.ok) {
-          const text = await res.text()
-          try {
-            const payload = JSON.parse(text)
-            throw new Error(payload.error || 'Failed to load response details')
-          } catch {
-            throw new Error(text || 'Failed to load response details')
-          }
+          await parseErrorResponse(res, 'Failed to load response details')
         }
         const data = await res.json()
         setResponse(data)
