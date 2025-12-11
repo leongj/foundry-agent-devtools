@@ -1,29 +1,96 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { formatDate, extractContentText, truncateText } from '../utils'
 import { TimelineItem } from './TimelineItem'
 
-export function ResponsesTable({ responses, selectedResponse, onSelectResponse }) {
-  if (responses.length === 0) {
-    return (
-      <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">ID</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Created</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Preview</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colSpan="4" className="px-4 py-8 text-center text-gray-600">No responses loaded yet.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    )
+export function ResponsesTable({ 
+  responses, 
+  selectedResponse, 
+  onSelectResponse,
+  onDeleteResponse,
+  onBulkDeleteResponses,
+  mutationLoading,
+  mutationError,
+  onClearError,
+  pagination,
+  onNextPage,
+  onPrevPage,
+  onFirstPage,
+  loading,
+  itemsPerPage,
+  onItemsPerPageChange
+}) {
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null)
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
+
+  // Clear selection when responses change (page change)
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [responses])
+
+  const handleDeleteClick = (e, response) => {
+    e.stopPropagation()
+    setDeleteConfirmId(response.id)
   }
+
+  const handleConfirmDelete = async (e) => {
+    e.stopPropagation()
+    if (deleteConfirmId) {
+      await onDeleteResponse(deleteConfirmId)
+      setDeleteConfirmId(null)
+      setSelectedIds(prev => {
+        const next = new Set(prev)
+        next.delete(deleteConfirmId)
+        return next
+      })
+    }
+  }
+
+  const handleCancelDelete = (e) => {
+    e.stopPropagation()
+    setDeleteConfirmId(null)
+  }
+
+  const handleCheckboxChange = (e, responseId) => {
+    e.stopPropagation()
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(responseId)) {
+        next.delete(responseId)
+      } else {
+        next.add(responseId)
+      }
+      return next
+    })
+  }
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(new Set(responses.map(r => r.id)))
+    } else {
+      setSelectedIds(new Set())
+    }
+  }
+
+  const handleBulkDeleteClick = () => {
+    setBulkDeleteConfirm(true)
+  }
+
+  const handleConfirmBulkDelete = async () => {
+    if (selectedIds.size > 0) {
+      await onBulkDeleteResponses(Array.from(selectedIds))
+      setSelectedIds(new Set())
+      setBulkDeleteConfirm(false)
+    }
+  }
+
+  const handleCancelBulkDelete = () => {
+    setBulkDeleteConfirm(false)
+  }
+
+  const allSelected = responses.length > 0 && 
+    responses.every(r => selectedIds.has(r.id))
+  const someSelected = selectedIds.size > 0
 
   const getContentPreview = (resp) => {
     if (!Array.isArray(resp?.output)) return ''
@@ -39,35 +106,218 @@ export function ResponsesTable({ responses, selectedResponse, onSelectResponse }
   }
 
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
-      <table className="w-full">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">ID</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Created</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Preview</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {responses.slice(0, 20).map(response => (
-            <tr 
-              key={response.id} 
-              onClick={() => onSelectResponse(response)}
-              className={`cursor-pointer transition-colors ${
-                selectedResponse?.id === response.id 
-                  ? 'bg-blue-50 hover:bg-blue-100' 
-                  : 'hover:bg-gray-50'
-              }`}
+    <div className="space-y-3">
+      {/* Action Bar */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {someSelected && (
+            <button
+              onClick={handleBulkDeleteClick}
+              disabled={mutationLoading}
+              className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg transition-colors flex items-center gap-2"
             >
-              <td className="px-4 py-3 text-sm text-gray-900">{response.id || '—'}</td>
-              <td className="px-4 py-3 text-sm text-gray-700">{response.status || '—'}</td>
-              <td className="px-4 py-3 text-sm text-gray-700">{formatDate(response.created_at * 1000)}</td>
-              <td className="px-4 py-3 text-sm text-gray-700">{truncateText(getContentPreview(response), 60)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              🗑️ Delete Selected ({selectedIds.size})
+            </button>
+          )}
+        </div>
+        {mutationError && (
+          <div className="flex items-center gap-2 text-red-600 text-sm">
+            <span>⚠️ {mutationError}</span>
+            <button 
+              onClick={onClearError}
+              className="text-red-400 hover:text-red-600"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      {bulkDeleteConfirm && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
+          <span className="text-red-700 text-sm">
+            Delete {selectedIds.size} response{selectedIds.size !== 1 ? 's' : ''}? This cannot be undone.
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCancelBulkDelete}
+              className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmBulkDelete}
+              disabled={mutationLoading}
+              className="px-3 py-1.5 text-sm bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-md transition-colors"
+            >
+              {mutationLoading ? 'Deleting...' : `Delete ${selectedIds.size}`}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Single Delete Confirmation Dialog */}
+      {deleteConfirmId && !bulkDeleteConfirm && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
+          <span className="text-red-700 text-sm">
+            Delete response <span className="font-mono">{deleteConfirmId.slice(0, 20)}...</span>?
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCancelDelete}
+              className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmDelete}
+              disabled={mutationLoading}
+              className="px-3 py-1.5 text-sm bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-md transition-colors"
+            >
+              {mutationLoading ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
+      {responses.length === 0 ? (
+        <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="w-10 px-4 py-3"></th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">ID</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Created</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Preview</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colSpan="6" className="px-4 py-8 text-center text-gray-600">No responses loaded yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">ID</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Created</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Preview</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {responses.map(response => (
+                <tr 
+                  key={response.id} 
+                  onClick={() => onSelectResponse(response)}
+                  className={`cursor-pointer transition-colors ${
+                    selectedResponse?.id === response.id 
+                      ? 'bg-blue-50 hover:bg-blue-100' 
+                      : selectedIds.has(response.id)
+                        ? 'bg-orange-50 hover:bg-orange-100'
+                        : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <td className="w-10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(response.id)}
+                      onChange={(e) => handleCheckboxChange(e, response.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900 font-mono">{response.id || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700">{response.status || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700">{formatDate(response.created_at * 1000)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700">{truncateText(getContentPreview(response), 60)}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={(e) => handleDeleteClick(e, response)}
+                      className="px-2 py-1 text-xs text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                      title="Delete response"
+                    >
+                      🗑️ Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {responses.length > 0 && (
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">
+              Page {pagination?.currentPage || 1}
+              {loading && <span className="ml-2 text-gray-400">Loading...</span>}
+            </span>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">Show:</label>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
+                disabled={loading}
+                className="px-2 py-1 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100"
+              >
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-sm text-gray-600">per page</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {pagination?.hasPrev && (
+              <>
+                <button
+                  onClick={onFirstPage}
+                  disabled={loading}
+                  className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 text-gray-700 rounded-md transition-colors"
+                >
+                  ⏮ First
+                </button>
+                <button
+                  onClick={onPrevPage}
+                  disabled={loading}
+                  className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 text-gray-700 rounded-md transition-colors"
+                >
+                  ← Previous
+                </button>
+              </>
+            )}
+            {pagination?.hasMore && (
+              <button
+                onClick={onNextPage}
+                disabled={loading}
+                className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 text-gray-700 rounded-md transition-colors"
+              >
+                Next →
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

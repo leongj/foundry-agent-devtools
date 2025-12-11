@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useAgents, useConversations, useConversationDetails, useResponses, useResponseDetails } from './hooks'
+import { useAgents, useConversations, useConversationDetails, useConversationMutations, useResponses, useResponseDetails, useResponseMutations } from './hooks'
 import { AgentsTable, AgentDetail } from './components/Agents'
 import { ConversationsTable, ConversationDetail } from './components/Conversations'
 import { ResponsesTable, ResponseDetail } from './components/Responses'
@@ -77,12 +77,24 @@ function App() {
   const [selectedAgent, setSelectedAgent] = useState(null)
   const [selectedConversation, setSelectedConversation] = useState(null)
   const [selectedResponse, setSelectedResponse] = useState(null)
+  const [conversationsLimit, setConversationsLimit] = useState(20)
+  const [responsesLimit, setResponsesLimit] = useState(20)
 
+  const conversationsConfig = { ...config, limit: conversationsLimit }
+  const responsesConfig = { ...config, limit: responsesLimit }
   const agentsData = useAgents(config)
-  const conversationsData = useConversations(config)
+  const conversationsData = useConversations(conversationsConfig)
   const conversationDetailsData = useConversationDetails(config, selectedConversation?.id)
-  const responsesData = useResponses(config)
+  const conversationMutations = useConversationMutations(config, () => {
+    conversationsData.refresh()
+    setSelectedConversation(null)
+  })
+  const responsesData = useResponses(responsesConfig)
   const responseDetailsData = useResponseDetails(config, selectedResponse?.id)
+  const responseMutations = useResponseMutations(config, () => {
+    responsesData.refresh()
+    setSelectedResponse(null)
+  })
 
   useEffect(() => {
     saveSettings(config)
@@ -168,6 +180,19 @@ function App() {
                 conversations={conversationsData.conversations}
                 selectedConversation={selectedConversation}
                 onSelectConversation={setSelectedConversation}
+                onCreateConversation={conversationMutations.createConversation}
+                onDeleteConversation={conversationMutations.deleteConversation}
+                onBulkDeleteConversations={conversationMutations.bulkDeleteConversations}
+                mutationLoading={conversationMutations.loading}
+                mutationError={conversationMutations.error}
+                onClearError={conversationMutations.clearError}
+                pagination={conversationsData.pagination}
+                onNextPage={conversationsData.nextPage}
+                onPrevPage={conversationsData.prevPage}
+                onFirstPage={conversationsData.firstPage}
+                loading={conversationsData.loading}
+                itemsPerPage={conversationsLimit}
+                onItemsPerPageChange={setConversationsLimit}
               />
             </section>
 
@@ -208,6 +233,18 @@ function App() {
                 responses={responsesData.responses}
                 selectedResponse={selectedResponse}
                 onSelectResponse={setSelectedResponse}
+                onDeleteResponse={responseMutations.deleteResponse}
+                onBulkDeleteResponses={responseMutations.bulkDeleteResponses}
+                mutationLoading={responseMutations.loading}
+                mutationError={responseMutations.error}
+                onClearError={responseMutations.clearError}
+                pagination={responsesData.pagination}
+                onNextPage={responsesData.nextPage}
+                onPrevPage={responsesData.prevPage}
+                onFirstPage={responsesData.firstPage}
+                loading={responsesData.loading}
+                itemsPerPage={responsesLimit}
+                onItemsPerPageChange={setResponsesLimit}
               />
             </section>
 
