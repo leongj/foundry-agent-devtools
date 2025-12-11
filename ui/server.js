@@ -27,15 +27,29 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (requestUrl.pathname === '/api/conversations') {
-      await handleConversationsRequest(requestUrl, res);
+      if (req.method === 'POST') {
+        await handleCreateConversationRequest(requestUrl, req, res);
+      } else {
+        await handleConversationsRequest(requestUrl, res);
+      }
       return;
     }
     if (requestUrl.pathname.startsWith('/api/conversations/') && requestUrl.pathname.endsWith('/items')) {
       await handleConversationItemsRequest(requestUrl, res);
       return;
     }
+    // Handle DELETE /api/conversations/{id}
+    if (requestUrl.pathname.startsWith('/api/conversations/') && req.method === 'DELETE') {
+      await handleDeleteConversationRequest(requestUrl, res);
+      return;
+    }
     if (requestUrl.pathname === '/api/responses') {
       await handleResponsesRequest(requestUrl, res);
+      return;
+    }
+    // Handle DELETE /api/responses/{id}
+    if (requestUrl.pathname.startsWith('/api/responses/') && req.method === 'DELETE') {
+      await handleDeleteResponseRequest(requestUrl, res);
       return;
     }
     if (requestUrl.pathname.startsWith('/api/responses/')) {
@@ -157,6 +171,9 @@ async function handleConversationsRequest(url, res) {
     sendJson(res, 200, {
       conversations,
       total: conversations.length,
+      has_more: payload?.has_more ?? false,
+      first_id: payload?.first_id || (conversations.length > 0 ? conversations[0].id : null),
+      last_id: payload?.last_id || (conversations.length > 0 ? conversations[conversations.length - 1].id : null),
       fetchedAt: new Date().toISOString(),
     });
   } catch (err) {
@@ -166,6 +183,70 @@ async function handleConversationsRequest(url, res) {
     }
     const status = err.status && Number.isInteger(err.status) ? err.status : 500;
     sendJson(res, status, { error: err.message || 'Failed to load conversations' });
+  }
+}
+
+async function handleCreateConversationRequest(url, req, res) {
+  try {
+    const ctx = buildRequestContext(url);
+    const query = { 'api-version': V2_AGENT_API_VERSION };
+    
+    // Read request body
+    let body = {};
+    try {
+      const chunks = [];
+      for await (const chunk of req) {
+        chunks.push(chunk);
+      }
+      const rawBody = Buffer.concat(chunks).toString();
+      if (rawBody) {
+        body = JSON.parse(rawBody);
+      }
+    } catch {
+      // Empty body is acceptable for creating a conversation
+    }
+    
+    const payload = await apiRequest(ctx, 'openai/conversations', { 
+      query, 
+      method: 'POST',
+      body 
+    });
+    sendJson(res, 201, payload);
+  } catch (err) {
+    if (err.code === 'USAGE') {
+      sendJson(res, 400, { error: err.message });
+      return;
+    }
+    const status = err.status && Number.isInteger(err.status) ? err.status : 500;
+    sendJson(res, status, { error: err.message || 'Failed to create conversation' });
+  }
+}
+
+async function handleDeleteConversationRequest(url, res) {
+  try {
+    const ctx = buildRequestContext(url);
+    // Extract conversation ID from path like /api/conversations/{id}
+    const match = url.pathname.match(/\/api\/conversations\/([^/]+)$/);
+    if (!match || !match[1]) {
+      sendJson(res, 400, { error: 'Invalid conversation ID' });
+      return;
+    }
+    const conversationId = match[1];
+    
+    const query = { 'api-version': V2_AGENT_API_VERSION };
+    
+    await apiRequest(ctx, `openai/conversations/${conversationId}`, { 
+      query, 
+      method: 'DELETE' 
+    });
+    sendJson(res, 200, { deleted: true, id: conversationId });
+  } catch (err) {
+    if (err.code === 'USAGE') {
+      sendJson(res, 400, { error: err.message });
+      return;
+    }
+    const status = err.status && Number.isInteger(err.status) ? err.status : 500;
+    sendJson(res, status, { error: err.message || 'Failed to delete conversation' });
   }
 }
 
@@ -213,6 +294,9 @@ async function handleResponsesRequest(url, res) {
     sendJson(res, 200, {
       responses,
       total: responses.length,
+      has_more: payload?.has_more ?? false,
+      first_id: payload?.first_id || (responses.length > 0 ? responses[0].id : null),
+      last_id: payload?.last_id || (responses.length > 0 ? responses[responses.length - 1].id : null),
       fetchedAt: new Date().toISOString(),
     });
   } catch (err) {
@@ -247,5 +331,33 @@ async function handleResponseDetailsRequest(url, res) {
     }
     const status = err.status && Number.isInteger(err.status) ? err.status : 500;
     sendJson(res, status, { error: err.message || 'Failed to load response details' });
+  }
+}
+
+async function handleDeleteResponseRequest(url, res) {
+  try {
+    const ctx = buildRequestContext(url);
+    // Extract response ID from path like /api/responses/{id}
+    const match = url.pathname.match(/\/api\/responses\/([^/]+)$/);
+    if (!match || !match[1]) {
+      sendJson(res, 400, { error: 'Invalid response ID' });
+      return;
+    }
+    const responseId = match[1];
+    
+    const query = { 'api-version': V2_AGENT_API_VERSION };
+    
+    await apiRequest(ctx, `openai/responses/${responseId}`, { 
+      query, 
+      method: 'DELETE' 
+    });
+    sendJson(res, 200, { deleted: true, id: responseId });
+  } catch (err) {
+    if (err.code === 'USAGE') {
+      sendJson(res, 400, { error: err.message });
+      return;
+    }
+    const status = err.status && Number.isInteger(err.status) ? err.status : 500;
+    sendJson(res, status, { error: err.message || 'Failed to delete response' });
   }
 }
