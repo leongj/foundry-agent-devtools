@@ -11,6 +11,8 @@ export function ResponsesTable({
   mutationLoading,
   mutationError,
   onClearError,
+  activeIdSearch,
+  onApplyIdSearch,
   pagination,
   onNextPage,
   onPrevPage,
@@ -22,11 +24,28 @@ export function ResponsesTable({
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
+  const [searchDraft, setSearchDraft] = useState(activeIdSearch || '')
 
   // Clear selection when responses change (page change)
   useEffect(() => {
     setSelectedIds(new Set())
   }, [responses])
+
+  useEffect(() => {
+    setSearchDraft(activeIdSearch || '')
+  }, [activeIdSearch])
+
+  const isSearchMode = (activeIdSearch || '').trim().length > 0
+  const isSearching = isSearchMode && loading
+
+  const applySearch = () => {
+    onApplyIdSearch?.(searchDraft)
+  }
+
+  const clearSearch = () => {
+    setSearchDraft('')
+    onApplyIdSearch?.('')
+  }
 
   const handleDeleteClick = (e, response) => {
     e.stopPropagation()
@@ -120,17 +139,55 @@ export function ResponsesTable({
             </button>
           )}
         </div>
-        {mutationError && (
-          <div className="flex items-center gap-2 text-red-600 text-sm">
-            <span>⚠️ {mutationError}</span>
-            <button 
-              onClick={onClearError}
-              className="text-red-400 hover:text-red-600"
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={searchDraft}
+              onChange={(e) => setSearchDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  applySearch()
+                }
+              }}
+              placeholder="Search by response ID (partial match)"
+              className="w-72 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+            />
+            <button
+              onClick={applySearch}
+              disabled={mutationLoading || isSearching}
+              className="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 rounded-lg transition-colors flex items-center gap-2"
             >
-              ✕
+              {isSearching && (
+                <span className="inline-block w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
+              )}
+              {isSearching ? 'Searching…' : 'Search'}
             </button>
+            {isSearchMode && (
+              <button
+                onClick={clearSearch}
+                className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
           </div>
-        )}
+
+          {mutationError && (
+            <div className="flex items-center gap-2 text-red-600 text-sm">
+              <span>⚠️ {mutationError}</span>
+              <button 
+                onClick={onClearError}
+                className="text-red-400 hover:text-red-600"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Bulk Delete Confirmation Dialog */}
@@ -197,7 +254,9 @@ export function ResponsesTable({
             </thead>
             <tbody>
               <tr>
-                <td colSpan="6" className="px-4 py-8 text-center text-gray-600">No responses loaded yet.</td>
+                <td colSpan="6" className="px-4 py-8 text-center text-gray-600">
+                  {isSearchMode ? 'No responses match your search.' : 'No responses loaded yet.'}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -265,7 +324,7 @@ export function ResponsesTable({
       )}
 
       {/* Pagination Controls */}
-      {responses.length > 0 && (
+      {responses.length > 0 && !isSearchMode && (
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">

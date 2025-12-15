@@ -26,6 +26,10 @@ const server = createServer(async (req, res) => {
       await handleAgentsRequest(requestUrl, res);
       return;
     }
+    if (requestUrl.pathname === '/api/conversations/search') {
+      await handleConversationsSearchRequest(requestUrl, res);
+      return;
+    }
     if (requestUrl.pathname === '/api/conversations') {
       if (req.method === 'POST') {
         await handleCreateConversationRequest(requestUrl, req, res);
@@ -45,6 +49,10 @@ const server = createServer(async (req, res) => {
     }
     if (requestUrl.pathname === '/api/responses') {
       await handleResponsesRequest(requestUrl, res);
+      return;
+    }
+    if (requestUrl.pathname === '/api/responses/search') {
+      await handleResponsesSearchRequest(requestUrl, res);
       return;
     }
     // Handle DELETE /api/responses/{id}
@@ -156,6 +164,28 @@ function sendJson(res, statusCode, body) {
   res.end(JSON.stringify(body));
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function apiRequestWithRetry(ctx, path, options, { retries = 3, baseDelayMs = 500 } = {}) {
+  let attempt = 0;
+  for (;;) {
+    try {
+      return await apiRequest(ctx, path, options);
+    } catch (err) {
+      const status = err?.status;
+      if (status === 429 && attempt < retries) {
+        const delay = baseDelayMs * Math.pow(2, attempt);
+        await sleep(delay);
+        attempt += 1;
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 async function handleConversationsRequest(url, res) {
   try {
     const ctx = buildRequestContext(url);
@@ -183,6 +213,86 @@ async function handleConversationsRequest(url, res) {
     }
     const status = err.status && Number.isInteger(err.status) ? err.status : 500;
     sendJson(res, status, { error: err.message || 'Failed to load conversations' });
+  }
+}
+
+async function handleConversationsSearchRequest(url, res) {
+  try {
+    const ctx = buildRequestContext(url);
+    const q = (url.searchParams.get('q') || '').trim().toLowerCase();
+    if (!q) {
+      sendJson(res, 200, {
+        conversations: [],
+        total: 0,
+        scanned: 0,
+        matched: 0,
+        has_more_scanned: false,
+        fetchedAt: new Date().toISOString(),
+      });
+      return;
+    }
+
+    const maxResultsRaw = url.searchParams.get('maxResults') || url.searchParams.get('limit');
+    const scanLimitRaw = url.searchParams.get('scanLimit');
+    const order = url.searchParams.get('order') || undefined;
+
+    const maxResults = Math.min(Math.max(Number.parseInt(maxResultsRaw || '200', 10) || 200, 1), 1000);
+    const scanLimit = Math.min(Math.max(Number.parseInt(scanLimitRaw || '5000', 10) || 5000, 1), 50000);
+    const pageSize = Math.min(Math.max(Number.parseInt(ctx.limit || '100', 10) || 100, 1), 200);
+
+    let cursor = null;
+    let scanned = 0;
+    const matches = [];
+    let hasMore = true;
+
+    while (hasMore && scanned < scanLimit && matches.length < maxResults) {
+      const query = { 'api-version': V2_AGENT_API_VERSION, limit: String(pageSize) };
+      if (order) query.order = order;
+      if (cursor) query.after = cursor;
+
+      const payload = await apiRequestWithRetry(ctx, 'openai/conversations', { query });
+      const rawList = payload?.conversations || payload?.data || payload?.items || payload;
+      const conversations = Array.isArray(rawList) ? rawList : rawList ? [rawList] : [];
+
+      if (conversations.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      for (const c of conversations) {
+        scanned += 1;
+        const id = (c?.id || '').toString().toLowerCase();
+        if (id && id.includes(q)) {
+          matches.push(c);
+          if (matches.length >= maxResults) break;
+        }
+        if (scanned >= scanLimit) break;
+      }
+
+      hasMore = payload?.has_more ?? false;
+      const nextCursor = payload?.last_id || conversations[conversations.length - 1]?.id || null;
+      if (!nextCursor || nextCursor === cursor) {
+        hasMore = false;
+        break;
+      }
+      cursor = nextCursor;
+    }
+
+    sendJson(res, 200, {
+      conversations: matches,
+      total: matches.length,
+      scanned,
+      matched: matches.length,
+      has_more_scanned: hasMore && scanned < scanLimit,
+      fetchedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    if (err.code === 'USAGE') {
+      sendJson(res, 400, { error: err.message });
+      return;
+    }
+    const status = err.status && Number.isInteger(err.status) ? err.status : 500;
+    sendJson(res, status, { error: err.message || 'Failed to search conversations' });
   }
 }
 
@@ -306,6 +416,86 @@ async function handleResponsesRequest(url, res) {
     }
     const status = err.status && Number.isInteger(err.status) ? err.status : 500;
     sendJson(res, status, { error: err.message || 'Failed to load responses' });
+  }
+}
+
+async function handleResponsesSearchRequest(url, res) {
+  try {
+    const ctx = buildRequestContext(url);
+    const q = (url.searchParams.get('q') || '').trim().toLowerCase();
+    if (!q) {
+      sendJson(res, 200, {
+        responses: [],
+        total: 0,
+        scanned: 0,
+        matched: 0,
+        has_more_scanned: false,
+        fetchedAt: new Date().toISOString(),
+      });
+      return;
+    }
+
+    const maxResultsRaw = url.searchParams.get('maxResults') || url.searchParams.get('limit');
+    const scanLimitRaw = url.searchParams.get('scanLimit');
+    const order = url.searchParams.get('order') || undefined;
+
+    const maxResults = Math.min(Math.max(Number.parseInt(maxResultsRaw || '200', 10) || 200, 1), 1000);
+    const scanLimit = Math.min(Math.max(Number.parseInt(scanLimitRaw || '5000', 10) || 5000, 1), 50000);
+    const pageSize = Math.min(Math.max(Number.parseInt(ctx.limit || '100', 10) || 100, 1), 200);
+
+    let cursor = null;
+    let scanned = 0;
+    const matches = [];
+    let hasMore = true;
+
+    while (hasMore && scanned < scanLimit && matches.length < maxResults) {
+      const query = { 'api-version': V2_AGENT_API_VERSION, limit: String(pageSize) };
+      if (order) query.order = order;
+      if (cursor) query.after = cursor;
+
+      const payload = await apiRequestWithRetry(ctx, 'openai/responses', { query });
+      const rawList = payload?.responses || payload?.data || payload?.items || payload;
+      const responses = Array.isArray(rawList) ? rawList : rawList ? [rawList] : [];
+
+      if (responses.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      for (const r of responses) {
+        scanned += 1;
+        const id = (r?.id || '').toString().toLowerCase();
+        if (id && id.includes(q)) {
+          matches.push(r);
+          if (matches.length >= maxResults) break;
+        }
+        if (scanned >= scanLimit) break;
+      }
+
+      hasMore = payload?.has_more ?? false;
+      const nextCursor = payload?.last_id || responses[responses.length - 1]?.id || null;
+      if (!nextCursor || nextCursor === cursor) {
+        hasMore = false;
+        break;
+      }
+      cursor = nextCursor;
+    }
+
+    sendJson(res, 200, {
+      responses: matches,
+      total: matches.length,
+      scanned,
+      matched: matches.length,
+      has_more_scanned: hasMore && scanned < scanLimit,
+      fetchedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    if (err.code === 'USAGE') {
+      sendJson(res, 400, { error: err.message });
+      return;
+    }
+    const status = err.status && Number.isInteger(err.status) ? err.status : 500;
+    sendJson(res, status, { error: err.message || 'Failed to search responses' });
   }
 }
 

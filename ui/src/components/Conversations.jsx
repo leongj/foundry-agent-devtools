@@ -12,6 +12,9 @@ export function ConversationsTable({
   mutationLoading,
   mutationError,
   onClearError,
+  loadError,
+  activeIdSearch,
+  onApplyIdSearch,
   pagination,
   onNextPage,
   onPrevPage,
@@ -23,11 +26,35 @@ export function ConversationsTable({
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
+  const [searchDraft, setSearchDraft] = useState(activeIdSearch || '')
+  const [searchRequested, setSearchRequested] = useState(false)
 
   // Clear selection when conversations change (page change)
   useEffect(() => {
     setSelectedIds(new Set())
   }, [conversations])
+
+  useEffect(() => {
+    setSearchDraft(activeIdSearch || '')
+  }, [activeIdSearch])
+
+  const isSearchMode = (activeIdSearch || '').trim().length > 0
+  const isSearching = (isSearchMode || searchRequested) && loading
+
+  useEffect(() => {
+    if (!loading) setSearchRequested(false)
+  }, [loading])
+
+  const applySearch = () => {
+    setSearchRequested(true)
+    onApplyIdSearch?.(searchDraft)
+  }
+
+  const clearSearch = () => {
+    setSearchDraft('')
+    setSearchRequested(false)
+    onApplyIdSearch?.('')
+  }
 
   const handleDeleteClick = (e, conversation) => {
     e.stopPropagation()
@@ -125,17 +152,61 @@ export function ConversationsTable({
             </button>
           )}
         </div>
-        {mutationError && (
-          <div className="flex items-center gap-2 text-red-600 text-sm">
-            <span>⚠️ {mutationError}</span>
-            <button 
-              onClick={onClearError}
-              className="text-red-400 hover:text-red-600"
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={searchDraft}
+              onChange={(e) => setSearchDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  applySearch()
+                }
+              }}
+              placeholder="Search by conversation ID (partial match)"
+              className="w-72 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+            />
+            <button
+              onClick={applySearch}
+              disabled={mutationLoading || isSearching}
+              className="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 rounded-lg transition-colors flex items-center gap-2"
             >
-              ✕
+              {isSearching && (
+                <span className="inline-block w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
+              )}
+              {isSearching ? 'Searching…' : 'Search'}
             </button>
+            {isSearchMode && (
+              <button
+                onClick={clearSearch}
+                className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
           </div>
-        )}
+
+          {mutationError && (
+            <div className="flex items-center gap-2 text-red-600 text-sm">
+              <span>⚠️ {mutationError}</span>
+              <button 
+                onClick={onClearError}
+                className="text-red-400 hover:text-red-600"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {loadError && (
+            <div className="flex items-center gap-2 text-red-600 text-sm">
+              <span>⚠️ {loadError}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Bulk Delete Confirmation Dialog */}
@@ -200,7 +271,9 @@ export function ConversationsTable({
             </thead>
             <tbody>
               <tr>
-                <td colSpan="4" className="px-4 py-8 text-center text-gray-600">No conversations loaded yet.</td>
+                <td colSpan="4" className="px-4 py-8 text-center text-gray-600">
+                  {isSearchMode ? 'No conversations match your search.' : 'No conversations loaded yet.'}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -264,7 +337,7 @@ export function ConversationsTable({
       )}
 
       {/* Pagination Controls */}
-      {conversations.length > 0 && (
+      {conversations.length > 0 && !isSearchMode && (
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">

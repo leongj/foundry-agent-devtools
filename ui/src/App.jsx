@@ -79,9 +79,11 @@ function App() {
   const [selectedResponse, setSelectedResponse] = useState(null)
   const [conversationsLimit, setConversationsLimit] = useState(20)
   const [responsesLimit, setResponsesLimit] = useState(20)
+  const [conversationsIdQuery, setConversationsIdQuery] = useState('')
+  const [responsesIdQuery, setResponsesIdQuery] = useState('')
 
-  const conversationsConfig = { ...config, limit: conversationsLimit }
-  const responsesConfig = { ...config, limit: responsesLimit }
+  const conversationsConfig = { ...config, limit: conversationsLimit, idQuery: conversationsIdQuery }
+  const responsesConfig = { ...config, limit: responsesLimit, idQuery: responsesIdQuery }
   const agentsData = useAgents(config)
   const conversationsData = useConversations(conversationsConfig)
   const conversationDetailsData = useConversationDetails(config, selectedConversation?.id)
@@ -186,6 +188,12 @@ function App() {
                 mutationLoading={conversationMutations.loading}
                 mutationError={conversationMutations.error}
                 onClearError={conversationMutations.clearError}
+                loadError={conversationsData.error}
+                activeIdSearch={conversationsIdQuery}
+                onApplyIdSearch={(q) => {
+                  setConversationsIdQuery(q)
+                  setSelectedConversation(null)
+                }}
                 pagination={conversationsData.pagination}
                 onNextPage={conversationsData.nextPage}
                 onPrevPage={conversationsData.prevPage}
@@ -238,6 +246,11 @@ function App() {
                 mutationLoading={responseMutations.loading}
                 mutationError={responseMutations.error}
                 onClearError={responseMutations.clearError}
+                activeIdSearch={responsesIdQuery}
+                onApplyIdSearch={(q) => {
+                  setResponsesIdQuery(q)
+                  setSelectedResponse(null)
+                }}
                 pagination={responsesData.pagination}
                 onNextPage={responsesData.nextPage}
                 onPrevPage={responsesData.prevPage}

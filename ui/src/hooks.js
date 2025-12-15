@@ -57,9 +57,49 @@ export function useConversations(config) {
     currentCursor: null
   })
 
+  const idQuery = (config?.idQuery || '').trim()
+  const isSearchMode = idQuery.length > 0
+
   const fetchConversations = async (cursor = null, direction = 'next') => {
     const { project, limit = 20, order } = config
     if (!project) return
+
+    // Server-side search across pages (not limited to current UI page)
+    if (isSearchMode) {
+      const params = new URLSearchParams({ project })
+      params.set('limit', '200')
+      if (order) params.set('order', order)
+      params.set('q', idQuery)
+      params.set('maxResults', '1000')
+      params.set('scanLimit', '20000')
+
+      setLoading(true)
+      setError(null)
+
+      try {
+        const response = await fetch(`/api/conversations/search?${params}`)
+        if (!response.ok) {
+          await parseErrorResponse(response, 'Failed to search conversations')
+        }
+        const data = await response.json()
+        setConversations(data.conversations || [])
+        setFetchedAt(data.fetchedAt)
+        setPagination({
+          hasMore: false,
+          firstId: null,
+          lastId: null,
+          cursorHistory: [],
+          currentCursor: null
+        })
+      } catch (err) {
+        setError(err.message)
+        setConversations([])
+      } finally {
+        setLoading(false)
+      }
+
+      return
+    }
 
     const params = new URLSearchParams({ project })
     params.set('limit', limit)
@@ -104,12 +144,14 @@ export function useConversations(config) {
   }
 
   const nextPage = () => {
+    if (isSearchMode) return
     if (pagination.hasMore && pagination.lastId) {
       fetchConversations(pagination.lastId, 'next')
     }
   }
 
   const prevPage = () => {
+    if (isSearchMode) return
     if (pagination.cursorHistory.length > 0) {
       const prevCursor = pagination.cursorHistory[pagination.cursorHistory.length - 1]
       fetchConversations(prevCursor, 'prev')
@@ -120,6 +162,10 @@ export function useConversations(config) {
   }
 
   const firstPage = () => {
+    if (isSearchMode) {
+      fetchConversations(null, 'first')
+      return
+    }
     fetchConversations(null, 'first')
   }
 
@@ -127,7 +173,7 @@ export function useConversations(config) {
     if (config.project) {
       fetchConversations()
     }
-  }, [config.project, config.limit, config.order])
+  }, [config.project, config.limit, config.order, config.idQuery])
 
   return { 
     conversations, 
@@ -136,9 +182,9 @@ export function useConversations(config) {
     fetchedAt, 
     refresh: () => fetchConversations(),
     pagination: {
-      hasMore: pagination.hasMore,
-      hasPrev: pagination.cursorHistory.length > 0 || pagination.currentCursor !== null,
-      currentPage: pagination.cursorHistory.length + 1
+      hasMore: isSearchMode ? false : pagination.hasMore,
+      hasPrev: isSearchMode ? false : (pagination.cursorHistory.length > 0 || pagination.currentCursor !== null),
+      currentPage: isSearchMode ? 1 : (pagination.cursorHistory.length + 1)
     },
     nextPage,
     prevPage,
@@ -306,9 +352,49 @@ export function useResponses(config) {
     currentCursor: null
   })
 
+  const idQuery = (config?.idQuery || '').trim()
+  const isSearchMode = idQuery.length > 0
+
   const fetchResponses = async (cursor = null, direction = 'next') => {
     const { project, limit = 20, order } = config
     if (!project) return
+
+    // Server-side search across pages (not limited to current UI page)
+    if (isSearchMode) {
+      const params = new URLSearchParams({ project })
+      params.set('limit', '200')
+      if (order) params.set('order', order)
+      params.set('q', idQuery)
+      params.set('maxResults', '1000')
+      params.set('scanLimit', '20000')
+
+      setLoading(true)
+      setError(null)
+
+      try {
+        const response = await fetch(`/api/responses/search?${params}`)
+        if (!response.ok) {
+          await parseErrorResponse(response, 'Failed to search responses')
+        }
+        const data = await response.json()
+        setResponses(data.responses || [])
+        setFetchedAt(data.fetchedAt)
+        setPagination({
+          hasMore: false,
+          firstId: null,
+          lastId: null,
+          cursorHistory: [],
+          currentCursor: null
+        })
+      } catch (err) {
+        setError(err.message)
+        setResponses([])
+      } finally {
+        setLoading(false)
+      }
+
+      return
+    }
 
     const params = new URLSearchParams({ project })
     params.set('limit', limit)
@@ -353,12 +439,14 @@ export function useResponses(config) {
   }
 
   const nextPage = () => {
+    if (isSearchMode) return
     if (pagination.hasMore && pagination.lastId) {
       fetchResponses(pagination.lastId, 'next')
     }
   }
 
   const prevPage = () => {
+    if (isSearchMode) return
     if (pagination.cursorHistory.length > 0) {
       const prevCursor = pagination.cursorHistory[pagination.cursorHistory.length - 1]
       fetchResponses(prevCursor, 'prev')
@@ -368,6 +456,10 @@ export function useResponses(config) {
   }
 
   const firstPage = () => {
+    if (isSearchMode) {
+      fetchResponses(null, 'first')
+      return
+    }
     fetchResponses(null, 'first')
   }
 
@@ -375,7 +467,7 @@ export function useResponses(config) {
     if (config.project) {
       fetchResponses()
     }
-  }, [config.project, config.limit, config.order])
+  }, [config.project, config.limit, config.order, config.idQuery])
 
   return { 
     responses, 
@@ -384,9 +476,9 @@ export function useResponses(config) {
     fetchedAt, 
     refresh: () => fetchResponses(),
     pagination: {
-      hasMore: pagination.hasMore,
-      hasPrev: pagination.cursorHistory.length > 0 || pagination.currentCursor !== null,
-      currentPage: pagination.cursorHistory.length + 1
+      hasMore: isSearchMode ? false : pagination.hasMore,
+      hasPrev: isSearchMode ? false : (pagination.cursorHistory.length > 0 || pagination.currentCursor !== null),
+      currentPage: isSearchMode ? 1 : (pagination.cursorHistory.length + 1)
     },
     nextPage,
     prevPage,
