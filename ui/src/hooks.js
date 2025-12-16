@@ -3,7 +3,7 @@ import { parseErrorResponse } from './utils'
 
 export function useAgents(config) {
   const [agents, setAgents] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(() => Boolean(config?.project))
   const [error, setError] = useState(null)
   const [fetchedAt, setFetchedAt] = useState(null)
 
@@ -36,9 +36,15 @@ export function useAgents(config) {
   }
 
   useEffect(() => {
-    if (config.project) {
-      fetchAgents()
+    if (!config.project) {
+      setAgents([])
+      setLoading(false)
+      setError(null)
+      setFetchedAt(null)
+      return
     }
+
+    fetchAgents()
   }, [config.project, config.limit, config.order, config.mode])
 
   return { agents, loading, error, fetchedAt, refresh: fetchAgents }
@@ -49,14 +55,69 @@ export function useConversations(config) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [fetchedAt, setFetchedAt] = useState(null)
+  const [pagination, setPagination] = useState({
+    hasMore: false,
+    firstId: null,
+    lastId: null,
+    cursorHistory: [], // Stack of cursors for going back
+    currentCursor: null
+  })
 
-  const fetchConversations = async () => {
-    const { project, limit, order } = config
+  const idQuery = (config?.idQuery || '').trim()
+  const isSearchMode = idQuery.length > 0
+
+  const fetchConversations = async (cursor = null, direction = 'next') => {
+    const { project, limit = 20, order } = config
     if (!project) return
 
+    // Server-side search across pages (not limited to current UI page)
+    if (isSearchMode) {
+      const params = new URLSearchParams({ project })
+      params.set('limit', '200')
+      if (order) params.set('order', order)
+      params.set('q', idQuery)
+      params.set('maxResults', '1000')
+      params.set('scanLimit', '20000')
+
+      setLoading(true)
+      setError(null)
+
+      try {
+        const response = await fetch(`/api/conversations/search?${params}`)
+        if (!response.ok) {
+          await parseErrorResponse(response, 'Failed to search conversations')
+        }
+        const data = await response.json()
+        setConversations(data.conversations || [])
+        setFetchedAt(data.fetchedAt)
+        setPagination({
+          hasMore: false,
+          firstId: null,
+          lastId: null,
+          cursorHistory: [],
+          currentCursor: null
+        })
+      } catch (err) {
+        setError(err.message)
+        setConversations([])
+      } finally {
+        setLoading(false)
+      }
+
+      return
+    }
+
     const params = new URLSearchParams({ project })
-    if (limit) params.set('limit', limit)
+    params.set('limit', limit)
     if (order) params.set('order', order)
+    
+    if (cursor) {
+      if (direction === 'next') {
+        params.set('after', cursor)
+      } else {
+        params.set('before', cursor)
+      }
+    }
 
     setLoading(true)
     setError(null)
@@ -69,6 +130,17 @@ export function useConversations(config) {
       const data = await response.json()
       setConversations(data.conversations || [])
       setFetchedAt(data.fetchedAt)
+      setPagination(prev => ({
+        hasMore: data.has_more ?? false,
+        firstId: data.first_id,
+        lastId: data.last_id,
+        cursorHistory: direction === 'next' && cursor 
+          ? [...prev.cursorHistory, prev.firstId]
+          : direction === 'prev' 
+            ? prev.cursorHistory.slice(0, -1)
+            : [],
+        currentCursor: cursor
+      }))
     } catch (err) {
       setError(err.message)
       setConversations([])
@@ -77,13 +149,53 @@ export function useConversations(config) {
     }
   }
 
+  const nextPage = () => {
+    if (isSearchMode) return
+    if (pagination.hasMore && pagination.lastId) {
+      fetchConversations(pagination.lastId, 'next')
+    }
+  }
+
+  const prevPage = () => {
+    if (isSearchMode) return
+    if (pagination.cursorHistory.length > 0) {
+      const prevCursor = pagination.cursorHistory[pagination.cursorHistory.length - 1]
+      fetchConversations(prevCursor, 'prev')
+    } else if (pagination.currentCursor) {
+      // Go back to first page
+      fetchConversations(null, 'first')
+    }
+  }
+
+  const firstPage = () => {
+    if (isSearchMode) {
+      fetchConversations(null, 'first')
+      return
+    }
+    fetchConversations(null, 'first')
+  }
+
   useEffect(() => {
     if (config.project) {
       fetchConversations()
     }
-  }, [config.project, config.limit, config.order])
+  }, [config.project, config.limit, config.order, config.idQuery])
 
-  return { conversations, loading, error, fetchedAt, refresh: fetchConversations }
+  return { 
+    conversations, 
+    loading, 
+    error, 
+    fetchedAt, 
+    refresh: () => fetchConversations(),
+    pagination: {
+      hasMore: isSearchMode ? false : pagination.hasMore,
+      hasPrev: isSearchMode ? false : (pagination.cursorHistory.length > 0 || pagination.currentCursor !== null),
+      currentPage: isSearchMode ? 1 : (pagination.cursorHistory.length + 1)
+    },
+    nextPage,
+    prevPage,
+    firstPage
+  }
 }
 
 export function useConversationDetails(config, conversationId) {
@@ -131,19 +243,176 @@ export function useConversationDetails(config, conversationId) {
   return { items, loading, error }
 }
 
+export function useConversationMutations(config, onSuccess) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  const createConversation = async () => {
+    const { project } = config
+    if (!project) return null
+
+    const params = new URLSearchParams({ project })
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/conversations?${params}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      })
+      if (!response.ok) {
+        await parseErrorResponse(response, 'Failed to create conversation')
+      }
+      const data = await response.json()
+      onSuccess?.()
+      return data
+    } catch (err) {
+      setError(err.message)
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deleteConversation = async (conversationId) => {
+    const { project } = config
+    if (!project || !conversationId) return false
+
+    const params = new URLSearchParams({ project })
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}?${params}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) {
+        await parseErrorResponse(response, 'Failed to delete conversation')
+      }
+      onSuccess?.()
+      return true
+    } catch (err) {
+      setError(err.message)
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const bulkDeleteConversations = async (conversationIds) => {
+    const { project } = config
+    if (!project || !conversationIds?.length) return { success: [], failed: [] }
+
+    const params = new URLSearchParams({ project })
+
+    setLoading(true)
+    setError(null)
+
+    const results = { success: [], failed: [] }
+
+    for (const id of conversationIds) {
+      try {
+        const response = await fetch(`/api/conversations/${id}?${params}`, {
+          method: 'DELETE'
+        })
+        if (response.ok) {
+          results.success.push(id)
+        } else {
+          results.failed.push(id)
+        }
+      } catch {
+        results.failed.push(id)
+      }
+    }
+
+    if (results.failed.length > 0) {
+      setError(`Failed to delete ${results.failed.length} conversation(s)`)
+    }
+
+    if (results.success.length > 0) {
+      onSuccess?.()
+    }
+
+    setLoading(false)
+    return results
+  }
+
+  const clearError = () => setError(null)
+
+  return { createConversation, deleteConversation, bulkDeleteConversations, loading, error, clearError }
+}
+
 export function useResponses(config) {
   const [responses, setResponses] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [fetchedAt, setFetchedAt] = useState(null)
+  const [pagination, setPagination] = useState({
+    hasMore: false,
+    firstId: null,
+    lastId: null,
+    cursorHistory: [],
+    currentCursor: null
+  })
 
-  const fetchResponses = async () => {
-    const { project, limit, order } = config
+  const idQuery = (config?.idQuery || '').trim()
+  const isSearchMode = idQuery.length > 0
+
+  const fetchResponses = async (cursor = null, direction = 'next') => {
+    const { project, limit = 20, order } = config
     if (!project) return
 
+    // Server-side search across pages (not limited to current UI page)
+    if (isSearchMode) {
+      const params = new URLSearchParams({ project })
+      params.set('limit', '200')
+      if (order) params.set('order', order)
+      params.set('q', idQuery)
+      params.set('maxResults', '1000')
+      params.set('scanLimit', '20000')
+
+      setLoading(true)
+      setError(null)
+
+      try {
+        const response = await fetch(`/api/responses/search?${params}`)
+        if (!response.ok) {
+          await parseErrorResponse(response, 'Failed to search responses')
+        }
+        const data = await response.json()
+        setResponses(data.responses || [])
+        setFetchedAt(data.fetchedAt)
+        setPagination({
+          hasMore: false,
+          firstId: null,
+          lastId: null,
+          cursorHistory: [],
+          currentCursor: null
+        })
+      } catch (err) {
+        setError(err.message)
+        setResponses([])
+      } finally {
+        setLoading(false)
+      }
+
+      return
+    }
+
     const params = new URLSearchParams({ project })
-    if (limit) params.set('limit', limit)
+    params.set('limit', limit)
     if (order) params.set('order', order)
+    
+    if (cursor) {
+      if (direction === 'next') {
+        params.set('after', cursor)
+      } else {
+        params.set('before', cursor)
+      }
+    }
 
     setLoading(true)
     setError(null)
@@ -156,6 +425,17 @@ export function useResponses(config) {
       const data = await response.json()
       setResponses(data.responses || [])
       setFetchedAt(data.fetchedAt)
+      setPagination(prev => ({
+        hasMore: data.has_more ?? false,
+        firstId: data.first_id,
+        lastId: data.last_id,
+        cursorHistory: direction === 'next' && cursor 
+          ? [...prev.cursorHistory, prev.firstId]
+          : direction === 'prev' 
+            ? prev.cursorHistory.slice(0, -1)
+            : [],
+        currentCursor: cursor
+      }))
     } catch (err) {
       setError(err.message)
       setResponses([])
@@ -164,13 +444,125 @@ export function useResponses(config) {
     }
   }
 
+  const nextPage = () => {
+    if (isSearchMode) return
+    if (pagination.hasMore && pagination.lastId) {
+      fetchResponses(pagination.lastId, 'next')
+    }
+  }
+
+  const prevPage = () => {
+    if (isSearchMode) return
+    if (pagination.cursorHistory.length > 0) {
+      const prevCursor = pagination.cursorHistory[pagination.cursorHistory.length - 1]
+      fetchResponses(prevCursor, 'prev')
+    } else if (pagination.currentCursor) {
+      fetchResponses(null, 'first')
+    }
+  }
+
+  const firstPage = () => {
+    if (isSearchMode) {
+      fetchResponses(null, 'first')
+      return
+    }
+    fetchResponses(null, 'first')
+  }
+
   useEffect(() => {
     if (config.project) {
       fetchResponses()
     }
-  }, [config.project, config.limit, config.order])
+  }, [config.project, config.limit, config.order, config.idQuery])
 
-  return { responses, loading, error, fetchedAt, refresh: fetchResponses }
+  return { 
+    responses, 
+    loading, 
+    error, 
+    fetchedAt, 
+    refresh: () => fetchResponses(),
+    pagination: {
+      hasMore: isSearchMode ? false : pagination.hasMore,
+      hasPrev: isSearchMode ? false : (pagination.cursorHistory.length > 0 || pagination.currentCursor !== null),
+      currentPage: isSearchMode ? 1 : (pagination.cursorHistory.length + 1)
+    },
+    nextPage,
+    prevPage,
+    firstPage
+  }
+}
+
+export function useResponseMutations(config, onSuccess) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  const deleteResponse = async (responseId) => {
+    const { project } = config
+    if (!project || !responseId) return false
+
+    const params = new URLSearchParams({ project })
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/responses/${responseId}?${params}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) {
+        await parseErrorResponse(response, 'Failed to delete response')
+      }
+      onSuccess?.()
+      return true
+    } catch (err) {
+      setError(err.message)
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const bulkDeleteResponses = async (responseIds) => {
+    const { project } = config
+    if (!project || !responseIds?.length) return { success: [], failed: [] }
+
+    const params = new URLSearchParams({ project })
+
+    setLoading(true)
+    setError(null)
+
+    const results = { success: [], failed: [] }
+
+    for (const id of responseIds) {
+      try {
+        const response = await fetch(`/api/responses/${id}?${params}`, {
+          method: 'DELETE'
+        })
+        if (response.ok) {
+          results.success.push(id)
+        } else {
+          results.failed.push(id)
+        }
+      } catch {
+        results.failed.push(id)
+      }
+    }
+
+    if (results.failed.length > 0) {
+      setError(`Failed to delete ${results.failed.length} response(s)`)
+    }
+
+    if (results.success.length > 0) {
+      onSuccess?.()
+    }
+
+    setLoading(false)
+    return results
+  }
+
+  const clearError = () => setError(null)
+
+  return { deleteResponse, bulkDeleteResponses, loading, error, clearError }
 }
 
 export function useResponseDetails(config, responseId) {

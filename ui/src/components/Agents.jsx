@@ -7,8 +7,9 @@ function getAgentTools(agent) {
   return tools.map(tool => tool.type).join(', ')
 }
 
-export function AgentsTable({ agents, selectedAgent, onSelectAgent }) {
+export function AgentsTable({ agents, loading, selectedAgent, onSelectAgent }) {
   if (agents.length === 0) {
+    const isLoading = Boolean(loading)
     return (
       <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
         <table className="w-full">
@@ -22,7 +23,17 @@ export function AgentsTable({ agents, selectedAgent, onSelectAgent }) {
           </thead>
           <tbody>
             <tr>
-              <td colSpan="4" className="px-4 py-8 text-center text-gray-600">No agents loaded yet.</td>
+              <td colSpan="4" className="px-4 py-8 text-center text-gray-600">
+                <div className="inline-flex items-center gap-2" role="status" aria-live="polite">
+                  {isLoading && (
+                    <span
+                      className="inline-block h-4 w-4 rounded-full border-2 border-gray-300 border-t-gray-700 animate-spin"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span>{isLoading ? 'Agents loading…' : 'No agents loaded yet.'}</span>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
