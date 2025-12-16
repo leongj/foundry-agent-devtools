@@ -6,7 +6,6 @@ export function ConversationsTable({
   conversations, 
   selectedConversation, 
   onSelectConversation,
-  onCreateConversation,
   onDeleteConversation,
   onBulkDeleteConversations,
   mutationLoading,
@@ -125,23 +124,6 @@ export function ConversationsTable({
       {/* Action Bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button
-            onClick={onCreateConversation}
-            disabled={mutationLoading}
-            className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors flex items-center gap-2"
-          >
-            {mutationLoading ? (
-              <>
-                <span className="animate-spin">⏳</span>
-                Creating...
-              </>
-            ) : (
-              <>
-                <span>+</span>
-                New Conversation
-              </>
-            )}
-          </button>
           {someSelected && (
             <button
               onClick={handleBulkDeleteClick}

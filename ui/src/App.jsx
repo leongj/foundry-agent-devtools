@@ -183,7 +183,6 @@ function App() {
                 conversations={conversationsData.conversations}
                 selectedConversation={selectedConversation}
                 onSelectConversation={setSelectedConversation}
-                onCreateConversation={conversationMutations.createConversation}
                 onDeleteConversation={conversationMutations.deleteConversation}
                 onBulkDeleteConversations={conversationMutations.bulkDeleteConversations}
                 mutationLoading={conversationMutations.loading}
